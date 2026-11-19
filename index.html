@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V8 (防砸盘)</title>
+<title>OKX 极值系统 V9 (折中实战版)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -47,7 +47,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 平稳极值防砸盘 V8</h1>
+    <h1>⚡ 平稳极值折中版 V9</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -77,7 +77,7 @@
 </div>
 
 <div class="section-header">
-    <div class="section-title">5m 极值突破 (实时防砸盘过滤)</div>
+    <div class="section-title">5m 极值突破 (折中实战)</div>
 </div>
 <div class="table-container">
     <table>
@@ -89,7 +89,6 @@
 <script>
 const OKX_URL = "https://www.okx.com/api/v5/market/candles";
 
-// 50 个固定币种
 const FIXED_COINS = [
     "ANT", "BTC", "ETH", "OKB", "SOL", "DOGE", "XRP", "BCH", "DOOD", "ZEC", "SNDK", 
     "XAU", "NVDA", "IRYS", "MMT", "PIEVERSE", "SOXL", "AKE", "PIPPIN", "SPCX", "SKHYNIX", 
@@ -115,7 +114,7 @@ function toggle4hTable() {
     }
 }
 
-// 抓取 K 线，同时返回已收盘的数据和最新正在走的数据
+// 抓取 K 线数据（包含已收盘和实时未收盘）
 async function fetchKlinesData(coin, interval) {
     const limit = 50;
     try {
@@ -124,13 +123,17 @@ async function fetchKlinesData(coin, interval) {
         const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=${okxInt}&limit=${limit}`);
         const json = await res.json();
         if (json.code === "0" && json.data.length > 0) {
-            const allData = json.data.reverse(); // 正序排列
-            const closedData = allData.filter(d => d[8] === '1'); // 只要已收盘的
-            const currentData = allData[allData.length - 1];      // 最新正在走的这一根
+            const allData = json.data.reverse();
+            const closedData = allData.filter(d => d[8] === '1');
+            const currentData = allData[allData.length - 1];
             
             return {
-                closed: closedData.map(d => ({ open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) })),
-                current: { open: parseFloat(currentData[1]), high: parseFloat(currentData[2]), low: parseFloat(currentData[3]), close: parseFloat(currentData[4]) }
+                closed: closedData.map(d => ({ 
+                    open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) 
+                })),
+                current: { 
+                    open: parseFloat(currentData[1]), high: parseFloat(currentData[2]), low: parseFloat(currentData[3]), close: parseFloat(currentData[4]) 
+                }
             };
         }
     } catch(e) {}
@@ -211,7 +214,7 @@ async function scan4H() {
     isScanning = false;
 }
 
-// ================= 扫描 5M (核心防御机制) =================
+// ================= 扫描 5M (折中实战逻辑) =================
 async function scan5M() {
     if (isScanning) return;
     isScanning = true;
@@ -226,7 +229,7 @@ async function scan5M() {
         return;
     }
 
-    status.innerText = "⏳ 5M 整点收盘，正在寻找突破+实时防砸盘过滤...";
+    status.innerText = "⏳ 5M 整点收盘，正在寻找高胜率入场点...";
     let entryCount = 0;
 
     for (let i = 0; i < cachedCoins.length; i++) {
@@ -241,38 +244,45 @@ async function scan5M() {
         const maxPrev30 = Math.max(...prev30.map(k => k.close));
         const minPrev30 = Math.min(...prev30.map(k => k.close));
         
-        // 获取当前的实时价格
         const realTimePrice = data5m.current.close;
         
         let signalType = null;
         let breakPrice = 0;
 
+        // 【折中优化1】：容差放宽到千分之0.5，稍微跌破也算
+        const tolerance = 0.0005;
+
         // 做空：最新收盘价 >= 前30根最高收盘价
-        if (item.trend === "SHORT" && latestClosed.close >= maxPrev30) {
+        if (item.trend === "SHORT" && latestClosed.close >= maxPrev30 * (1 - tolerance)) {
             signalType = "SHORT";
             breakPrice = maxPrev30;
-            // 【V8防御】：如果实盘现价已经远高于突破价 (暴涨)，说明多头反扑极猛，不追
-            if (realTimePrice > breakPrice * 1.008) signalType = null; 
+            // 【折中优化2】：实时价格偏离度放宽到 1.5%
+            if (realTimePrice > breakPrice * 1.015) signalType = null; 
         }
         // 做多：最新收盘价 <= 前30根最低收盘价
-        else if (item.trend === "LONG" && latestClosed.close <= minPrev30) {
+        else if (item.trend === "LONG" && latestClosed.close <= minPrev30 * (1 + tolerance)) {
             signalType = "LONG";
             breakPrice = minPrev30;
             
-            // 【V8核心修复】：防接飞刀！
-            // 1. 如果实盘现价已经远低于突破价 (暴跌超1%)，说明在瀑布，绝对不能接！
-            if (realTimePrice < breakPrice * 0.99) signalType = null;
+            // 【折中优化3】：实时价格偏离度放宽到 1.5%
+            if (realTimePrice < breakPrice * 0.985) signalType = null;
             
-            // 2. 检查这根跌破的 5M 收盘K线本身，如果是一根实体大阴线（跌幅超1%），说明砸盘太凶，不接
+            // 【折中优化4 - 核心】：加入“长下影线豁免”机制
+            // 计算这根跌破的5m K线实体跌幅
             const candleDrop = (latestClosed.open - latestClosed.close) / latestClosed.open;
-            if (candleDrop > 0.01) signalType = null;
+            if (candleDrop > 0.01) { 
+                // 如果它是一根大阴线（跌超1%），看它的下影线长不长
+                const lowerShadow = latestClosed.close - latestClosed.low; 
+                const bodySize = latestClosed.open - latestClosed.close;
+                // 如果下影线不足实体的 1.5 倍，说明没有承接盘，直接放弃
+                if (lowerShadow < bodySize * 1.5) signalType = null;
+            }
             
-            // 3. （结合图2修复）检查当前正在走的 4H 是不是暴跌。
-            // 如果 4H 当前跌幅超过 2%，说明宏观正在崩盘，不能去5m接
+            // 【折中优化5】：4H宏观防御放宽到 2.5%
             const data4h = await fetchKlinesData(item.coin, "4h");
             if (data4h.current) {
                 const h4Drop = (data4h.current.open - data4h.current.close) / data4h.current.open;
-                if (h4Drop > 0.02) signalType = null; 
+                if (h4Drop > 0.025) signalType = null; 
             }
         }
 
@@ -293,15 +303,15 @@ async function scan5M() {
         await new Promise(r => setTimeout(r, 150)); 
     }
     
-    status.innerText = `✅ 本轮巡检完毕，严格过滤后捕获 ${entryCount} 个信号。`;
+    status.innerText = `✅ 本轮巡检完毕，捕获 ${entryCount} 个折中信号。`;
     
     if (entryCount > 0) {
         let isBlink = false;
         let blinkTimer = setInterval(() => {
-            document.title = isBlink ? "🚨 发现极值突破！" : "⚡ 防砸盘极值系统";
+            document.title = isBlink ? "🚨 发现折中入场点！" : "⚡ V9 实战巡航中";
             isBlink = !isBlink;
         }, 1000);
-        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 平稳极值防砸盘 V8"; }, 10000); 
+        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 平稳极值折中 V9"; }, 10000); 
     }
     isScanning = false;
 }
