@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V12 (10根K线)</title>
+<title>OKX 极值系统 V14 (日线+新闻情绪)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
         --accent-blue: #00e5ff; --accent-green: #00e676; --accent-red: #ff5252; --border-color: #2d3748;
+        --accent-gold: #ffb300;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 16px; line-height: 1.5; padding-bottom: 40px;}
@@ -15,18 +16,24 @@
     .header { text-align: center; margin-bottom: 15px; }
     .header h1 { font-size: 22px; color: var(--accent-blue); text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
 
+    /* 新增：实时情绪面板 */
+    .sentiment-panel { background: linear-gradient(145deg, #2a1b1b, #1a1111); border: 1px solid #553333; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
+    .sentiment-title { font-size: 14px; color: var(--accent-gold); font-weight: bold; margin-bottom: 8px; }
+    .sentiment-value { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+    .sentiment-desc { font-size: 12px; color: var(--text-sub); margin-top: 5px; }
+
     .timer-panel { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center; display: none;}
     .timer-panel.active { display: block; }
     .timer-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; font-weight: bold; }
     .timer-row:last-child { margin-bottom: 0; }
     .timer-label { color: var(--text-sub); }
-    .timer-value { color: #ffb300; font-family: monospace; font-size: 16px; }
+    .timer-value { color: var(--accent-gold); font-family: monospace; font-size: 16px; }
 
     .master-btn { display: block; width: 100%; padding: 18px; background: linear-gradient(90deg, #00e676, #00b0ff); color: #000; font-size: 18px; font-weight: bold; border: none; border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);}
     .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
     .master-btn:active { transform: scale(0.98); }
 
-    .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: #ffb300; }
+    .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: var(--accent-gold); }
     
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-left: 5px; border-left: 4px solid var(--accent-blue); }
     .section-title { font-size: 15px; color: #fff; font-weight: bold; }
@@ -42,31 +49,42 @@
 
     .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
     .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
+    
+    /* 新闻情绪标签 */
+    .tag-news-bull { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(0, 230, 118, 0.2); margin-left: 5px;}
+    .tag-news-bear { background: rgba(255, 82, 82, 0.1); color: var(--accent-red); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(255, 82, 82, 0.2); margin-left: 5px;}
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V12 (10根K线)</h1>
+    <h1>⚡ 极值系统 V14 (情绪研判版)</h1>
+</div>
+
+<!-- 实时情绪仪表盘 -->
+<div class="sentiment-panel" id="sentimentPanel">
+    <div class="sentiment-title">📊 实时市场情绪 (恐慌贪婪指数)</div>
+    <div class="sentiment-value" id="fgiValue">--</div>
+    <div class="sentiment-desc" id="fgiDesc">正在获取数据...</div>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
 
 <div class="timer-panel" id="timerPanel">
     <div class="timer-row">
-        <span class="timer-label">距离下次 4H 扫描</span>
-        <span class="timer-value" id="countdown4h">--:--:--</span>
+        <span class="timer-label">距离下次 1D 扫描</span>
+        <span class="timer-value" id="countdown1d">--:--:--</span>
     </div>
     <div class="timer-row">
-        <span class="timer-label">距离下次 5m 扫描</span>
-        <span class="timer-value" id="countdown5m">--:--</span>
+        <span class="timer-label">距离下次 15m 扫描</span>
+        <span class="timer-value" id="countdown15m">--:--</span>
     </div>
 </div>
 
 <div class="status-box" id="statusMain">等待启动...</div>
 
 <div class="section-header">
-    <div class="section-title">4H 平稳趋势监控</div>
+    <div class="section-title">1D 平稳趋势监控 (日线级别)</div>
     <button class="toggle-btn" id="toggleBtn4h" onclick="toggle4hTable()">收起</button>
 </div>
 <div class="table-container" id="container4h">
@@ -77,17 +95,19 @@
 </div>
 
 <div class="section-header">
-    <div class="section-title">5m 阴线踩底 / 阳线探顶 (10K极值)</div>
+    <div class="section-title">15m 阴线踩底 / 阳线探顶 (含情绪风控)</div>
 </div>
 <div class="table-container">
     <table>
-        <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>当前收盘</th></tr></thead>
-        <tbody id="tbody5m"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
+        <thead><tr><th>币种</th><th>形态</th><th>情绪</th><th>关键位</th><th>收盘</th></tr></thead>
+        <tbody id="tbody5m"><tr><td colspan="5" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
     </table>
 </div>
 
 <script>
 const OKX_URL = "https://www.okx.com/api/v5/market/candles";
+// 免费新闻情绪API (Crypto Vision，无需API Key，支持CORS)
+const NEWS_API = "https://cryptocurrency.cv/api";
 
 const FIXED_COINS = [
     "ANT", "BTC", "ETH", "OKB", "SOL", "DOGE", "XRP", "BCH", "DOOD", "ZEC", "SNDK", 
@@ -99,8 +119,12 @@ const FIXED_COINS = [
 
 let isRunning = false;
 let isScanning = false; 
-let timer4h, timer5m, uiTimer;
+let timer1d, timer15m, uiTimer;
 let cachedCoins = []; 
+
+// 全局市场情绪变量
+let globalFearGreed = 50; // 默认中性
+let globalSentimentLabel = "Neutral";
 
 function toggle4hTable() {
     const container = document.getElementById('container4h');
@@ -114,25 +138,44 @@ function toggle4hTable() {
     }
 }
 
+// ================= 获取实时市场情绪 =================
+async function fetchMarketSentiment() {
+    try {
+        // 获取恐慌贪婪指数
+        const fgRes = await fetch(`${NEWS_API}/market/fear-greed`);
+        const fgJson = await fgRes.json();
+        
+        globalFearGreed = fgJson.value || 50;
+        globalSentimentLabel = fgJson.classification || "Neutral";
+
+        document.getElementById('fgiValue').innerText = globalFearGreed;
+        document.getElementById('fgiValue').style.color = 
+            globalFearGreed > 60 ? 'var(--accent-green)' : 
+            globalFearGreed < 40 ? 'var(--accent-red)' : 'var(--accent-gold)';
+        document.getElementById('fgiDesc').innerText = globalSentimentLabel;
+
+    } catch (e) {
+        console.warn("获取情绪指数失败，使用默认中性值", e);
+        document.getElementById('fgiValue').innerText = "--";
+        document.getElementById('fgiDesc').innerText = "数据获取失败";
+    }
+}
+
+// ================= 抓取 K 线 (复用原有逻辑) =================
 async function fetchKlinesData(coin, interval) {
-    const limit = 50;
+    const limit = 60;
     try {
         const okxSym = `${coin}-USDT-SWAP`;
-        const okxInt = interval === "4h" ? "4H" : "5m";
+        const okxInt = interval === "1d" ? "1D" : "15m";
         const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=${okxInt}&limit=${limit}`);
         const json = await res.json();
         if (json.code === "0" && json.data.length > 0) {
             const allData = json.data.reverse();
             const closedData = allData.filter(d => d[8] === '1');
             const currentData = allData[allData.length - 1];
-            
             return {
-                closed: closedData.map(d => ({ 
-                    open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) 
-                })),
-                current: { 
-                    open: parseFloat(currentData[1]), high: parseFloat(currentData[2]), low: parseFloat(currentData[3]), close: parseFloat(currentData[4]) 
-                }
+                closed: closedData.map(d => ({ open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) })),
+                current: { open: parseFloat(currentData[1]), high: parseFloat(currentData[2]), low: parseFloat(currentData[3]), close: parseFloat(currentData[4]) }
             };
         }
     } catch(e) {}
@@ -157,20 +200,20 @@ function calcRSI(klines, period = 14) {
     return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
 }
 
-// ================= 扫描 4H =================
-async function scan4H() {
+// ================= 扫描 1D =================
+async function scan1D() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody4h');
     
-    status.innerText = "⏳ 4H 整点收盘，正在寻找平稳趋势...";
+    status.innerText = "⏳ 1D 整点收盘，正在寻找平稳趋势...";
     tbody.innerHTML = "";
     cachedCoins = [];
 
     for (let i = 0; i < FIXED_COINS.length; i++) {
         const coin = FIXED_COINS[i];
-        const data = await fetchKlinesData(coin, "4h");
+        const data = await fetchKlinesData(coin, "1d");
         if (data.closed.length < 30) continue;
         
         const k = data.closed;
@@ -182,16 +225,16 @@ async function scan4H() {
         const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
         const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
 
-        const isC0Huge = Math.abs(c0.close - c0.open) / c0.open > 0.04;
-        const isC1Huge = Math.abs(c1.close - c1.open) / c1.open > 0.04;
-        const isC2Huge = Math.abs(c2.close - c2.open) / c2.open > 0.04;
+        const isC0Huge = Math.abs(c0.close - c0.open) / c0.open > 0.08;
+        const isC1Huge = Math.abs(c1.close - c1.open) / c1.open > 0.08;
+        const isC2Huge = Math.abs(c2.close - c2.open) / c2.open > 0.08;
         const noHugeCandles = !isC0Huge && !isC1Huge && !isC2Huge;
 
         const longAlign = (e5_0 > e20_0) && (e5_1 > e20_1) && (e5_2 > e20_2);
         const shortAlign = (e5_0 < e20_0) && (e5_1 < e20_1) && (e5_2 < e20_2);
 
         const bias = Math.abs(c0.close - e20_0) / e20_0;
-        const isBiasOk = bias < 0.08;
+        const isBiasOk = bias < 0.15;
 
         let trend = null;
         if (noHugeCandles && isBiasOk) {
@@ -209,12 +252,12 @@ async function scan4H() {
         await new Promise(r => setTimeout(r, 120)); 
     }
     
-    status.innerText = `✅ 4H 平稳定势完成，仅 ${cachedCoins.length} 个币符合条件。`;
+    status.innerText = `✅ 1D 平稳定势完成，锁定 ${cachedCoins.length} 个趋势币。`;
     isScanning = false;
 }
 
-// ================= 扫描 5M (10根逻辑) =================
-async function scan5M() {
+// ================= 扫描 15M (含新闻情绪风控) =================
+async function scan15M() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
@@ -223,85 +266,79 @@ async function scan5M() {
     tbody.innerHTML = "";
 
     if (cachedCoins.length === 0) {
-        status.innerText = "ℹ️ 5M 巡检跳过：当前没有符合条件的币种。";
+        status.innerText = "ℹ️ 15m 巡检跳过：当前没有符合条件的币种。";
         isScanning = false;
         return;
     }
 
-    status.innerText = "⏳ 5M 整点收盘，正在寻找阴线踩底/阳线探顶...";
+    status.innerText = "⏳ 15m 整点收盘，正在寻找机会并研判新闻情绪...";
     let entryCount = 0;
 
     for (let i = 0; i < cachedCoins.length; i++) {
         const item = cachedCoins[i];
-        const data5m = await fetchKlinesData(item.coin, "5m");
+        const data15m = await fetchKlinesData(item.coin, "15m");
         
-        // 【修改点】：要求已收盘数据至少 11 根（1根当前 + 10根历史）
-        if (data5m.closed.length < 11 || !data5m.current) continue;
+        if (data15m.closed.length < 21 || !data15m.current) continue;
         
-        const latestClosed = data5m.closed[data5m.closed.length - 1];
-        // 【修改点】：截取前 10 根
-        const prev10 = data5m.closed.slice(-11, -1); 
+        const latestClosed = data15m.closed[data15m.closed.length - 1];
+        const prev20 = data15m.closed.slice(-21, -1); 
         
-        // 获取前10根的基础极值，用于兜底
-        const maxHigh10 = Math.max(...prev10.map(k => k.high));
-        const minLow10 = Math.min(...prev10.map(k => k.low));
+        const maxHigh20 = Math.max(...prev20.map(k => k.high));
+        const minLow20 = Math.min(...prev20.map(k => k.low));
         
-        const realTimePrice = data5m.current.close;
+        const realTimePrice = data15m.current.close;
         
         let signalType = null;
         let keyPrice = 0;
-
-        // 误差范围：0.15% (触碰或接近)
+        let sentimentTag = "";
         const tolerance = 0.0015;
 
-        // === 做多逻辑：当前收阴，寻找前10根阴线的最低点 ===
+        // 做多逻辑
         if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
-            // 提取前10根里的阴线
-            const bearishK = prev10.filter(k => k.close < k.open);
-            let targetLow = minLow10; // 兜底：如果10根全是阳线，就用前10根最低点
-            
-            if (bearishK.length > 0) {
-                // 取所有阴线里的最低点
-                targetLow = Math.min(...bearishK.map(k => k.low));
-            }
+            const bearishK = prev20.filter(k => k.close < k.open);
+            let targetLow = minLow20; 
+            if (bearishK.length > 0) targetLow = Math.min(...bearishK.map(k => k.low));
 
-            // 当前阴线的最低点是否突破或接近 targetLow
             if (latestClosed.low <= targetLow * (1 + tolerance)) {
-                // 防砸盘：实体跌幅不能过大(>1%)，否则如果有下影线可以豁免
                 const bodyDrop = (latestClosed.open - latestClosed.close) / latestClosed.open;
                 const lowerShadow = latestClosed.close - latestClosed.low;
                 
                 if (!(bodyDrop > 0.01 && lowerShadow < (latestClosed.open - latestClosed.close))) {
-                    signalType = "LONG";
-                    keyPrice = targetLow;
-                    
-                    if (realTimePrice < targetLow * 0.985) signalType = null; 
+                    // 【新闻情绪风控】做多拦截：极度恐慌时，防守成功率降低
+                    if (globalFearGreed < 25) {
+                        sentimentTag = `<span class="tag-news-bear">宏观恐慌拦截</span>`;
+                        signalType = null; // 拦截
+                    } else {
+                        signalType = "LONG";
+                        keyPrice = targetLow;
+                        sentimentTag = `<span class="tag-news-bull">情绪允许</span>`;
+                        if (realTimePrice < targetLow * 0.985) signalType = null; 
+                    }
                 }
             }
         }
         
-        // === 做空逻辑：当前收阳，寻找前10根阳线的最高点 ===
+        // 做空逻辑
         else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
-            // 提取前10根里的阳线
-            const bullishK = prev10.filter(k => k.close > k.open);
-            let targetHigh = maxHigh10; // 兜底
-            
-            if (bullishK.length > 0) {
-                // 取所有阳线里的最高点
-                targetHigh = Math.max(...bullishK.map(k => k.high));
-            }
+            const bullishK = prev20.filter(k => k.close > k.open);
+            let targetHigh = maxHigh20; 
+            if (bullishK.length > 0) targetHigh = Math.max(...bullishK.map(k => k.high));
 
-            // 当前阳线的最高点是否突破或接近 targetHigh
             if (latestClosed.high >= targetHigh * (1 - tolerance)) {
-                // 防拉飞：实体涨幅不能过大(>1%)，否则如果有上影线可以豁免
                 const bodyRise = (latestClosed.close - latestClosed.open) / latestClosed.open;
                 const upperShadow = latestClosed.high - latestClosed.close;
                 
                 if (!(bodyRise > 0.01 && upperShadow < (latestClosed.close - latestClosed.open))) {
-                    signalType = "SHORT";
-                    keyPrice = targetHigh;
-                    
-                    if (realTimePrice > targetHigh * 1.015) signalType = null;
+                    // 【新闻情绪风控】做空拦截：极度贪婪时，谨防空头逼空
+                    if (globalFearGreed > 80) {
+                        sentimentTag = `<span class="tag-news-bull">宏观贪婪拦截</span>`;
+                        signalType = null; // 拦截
+                    } else {
+                        signalType = "SHORT";
+                        keyPrice = targetHigh;
+                        sentimentTag = `<span class="tag-news-bear">情绪允许</span>`;
+                        if (realTimePrice > targetHigh * 1.015) signalType = null;
+                    }
                 }
             }
         }
@@ -314,58 +351,69 @@ async function scan5M() {
             tr.innerHTML = `
                 <td>${item.coin}</td>
                 <td><span class="${tagClass}">${tagText}</span></td>
+                <td>${sentimentTag}</td>
                 <td style="color:#00e5ff">${formatPrice(keyPrice)}</td>
                 <td style="color:#fff">${formatPrice(latestClosed.close)}</td>
             `;
             tbody.appendChild(tr);
             entryCount++;
+        } else if (sentimentTag.includes("拦截")) {
+            // 如果有拦截，也在表格中显示出来，方便复盘
+            const tr = document.createElement('tr');
+            tr.style.opacity = "0.5";
+            tr.innerHTML = `
+                <td>${item.coin}</td>
+                <td style="color:#888">信号受限</td>
+                <td>${sentimentTag}</td>
+                <td style="color:#888">--</td>
+                <td style="color:#888">${formatPrice(latestClosed.close)}</td>
+            `;
+            tbody.appendChild(tr);
         }
         await new Promise(r => setTimeout(r, 150)); 
     }
     
-    status.innerText = `✅ 巡检完毕，发现 ${entryCount} 个阴线踩底/阳线探顶。`;
-    
-    if (entryCount > 0) {
-        let isBlink = false;
-        let blinkTimer = setInterval(() => {
-            document.title = isBlink ? "🚨 发现阴线踩底！" : "⚡ V12 巡航中";
-            isBlink = !isBlink;
-        }, 1000);
-        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 极值系统 V12"; }, 10000); 
-    }
+    status.innerText = `✅ 巡检完毕，捕获 ${entryCount} 个信号 (部分可能被新闻情绪拦截)。`;
     isScanning = false;
 }
 
-function scheduleNext(intervalMs, callback) {
+// ================= 定时器 =================
+function startCycle1D() {
+    const intervalMs = 24 * 60 * 60 * 1000;
     const now = Date.now();
     const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000;
-    return setTimeout(callback, nextTime - now);
+    
+    timer1d = setTimeout(async () => {
+        await scan1D(); 
+        await scan15M(); 
+        if (isRunning) startCycle1D();
+    }, nextTime - now);
 }
 
-function startCycle4h() {
-    timer4h = scheduleNext(4 * 60 * 60 * 1000, async () => {
-        await scan4H(); await scan5M(); 
-        if (isRunning) startCycle4h();
-    });
-}
-
-function startCycle5m() {
-    timer5m = scheduleNext(5 * 60 * 1000, async () => {
-        await scan5M();
-        if (isRunning) startCycle5m();
-    });
+function startCycle15M() {
+    const intervalMs = 15 * 60 * 1000;
+    const now = Date.now();
+    const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000;
+    
+    timer15m = setTimeout(async () => {
+        // 每 15 分钟顺手刷新一次情绪面板
+        fetchMarketSentiment();
+        await scan15M();
+        if (isRunning) startCycle15M();
+    }, nextTime - now);
 }
 
 function updateCountdowns() {
     if (!isRunning) return;
     const now = Date.now();
-    const next4h = Math.ceil(now / 14400000) * 14400000 + 2000;
-    const diff4h = Math.max(0, next4h - now);
-    document.getElementById('countdown4h').innerText = `${Math.floor(diff4h/3600000).toString().padStart(2,'0')}:${Math.floor((diff4h%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff4h%60000)/1000).toString().padStart(2,'0')}`;
     
-    const next5m = Math.ceil(now / 300000) * 300000 + 2000;
-    const diff5m = Math.max(0, next5m - now);
-    document.getElementById('countdown5m').innerText = `${Math.floor(diff5m/60000).toString().padStart(2,'0')}:${Math.floor((diff5m%60000)/1000).toString().padStart(2,'0')}`;
+    const next1d = Math.ceil(now / 86400000) * 86400000 + 2000;
+    const diff1d = Math.max(0, next1d - now);
+    document.getElementById('countdown1d').innerText = `${Math.floor(diff1d/3600000).toString().padStart(2,'0')}:${Math.floor((diff1d%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff1d%60000)/1000).toString().padStart(2,'0')}`;
+    
+    const next15m = Math.ceil(now / 900000) * 900000 + 2000;
+    const diff15m = Math.max(0, next15m - now);
+    document.getElementById('countdown15m').innerText = `${Math.floor(diff15m/60000).toString().padStart(2,'0')}:${Math.floor((diff15m%60000)/1000).toString().padStart(2,'0')}`;
 }
 
 function toggleAuto() {
@@ -375,16 +423,19 @@ function toggleAuto() {
 
     if (isRunning) {
         isRunning = false;
-        clearTimeout(timer4h); clearTimeout(timer5m); clearInterval(uiTimer);
+        clearTimeout(timer1d); clearTimeout(timer15m); clearInterval(uiTimer);
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
         panel.classList.remove('active'); status.innerText = "自动巡航已停止。";
     } else {
         isRunning = true;
         btn.innerText = "停止自动巡航"; btn.classList.add('stop');
         panel.classList.add('active'); status.innerText = "系统已启动，正在对齐收盘时间...";
+        
+        fetchMarketSentiment(); // 启动时拉取一次
         updateCountdowns(); uiTimer = setInterval(updateCountdowns, 1000);
-        scan4H().then(() => scan5M());
-        startCycle4h(); startCycle5m();
+        
+        scan1D().then(() => scan15M());
+        startCycle1D(); startCycle15M();
     }
 }
 
