@@ -2,169 +2,328 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>欧意合约信号扫描</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>OKX 智能合约扫盘终端 V2</title>
 <style>
-    body { font-family: sans-serif; padding: 15px; background: #111; color: #eee; }
-    h2 { text-align: center; color: #00e5ff; margin-bottom: 5px;} /* 欧意蓝 */
-    .desc { text-align: center; color: #888; font-size: 12px; margin-bottom: 15px;}
-    #status { text-align: center; color: #ffb300; margin-bottom: 15px; font-weight: bold; font-size: 14px; min-height: 20px;}
-    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
-    th, td { border: 1px solid #444; padding: 8px; text-align: center; }
-    th { background: #222; color: #aaa; }
-    .long { color: #00e676; font-weight: bold; }
-    .avoid { color: #ff5252; font-weight: bold; }
-    .btn { display: block; width: 100%; padding: 12px; background: #00e5ff; color: #000; 
-           text-align: center; font-weight: bold; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 15px; }
-    .btn:disabled { background: #555; color: #aaa; }
+    :root {
+        --bg-color: #0b0e14;
+        --card-bg: #151a24;
+        --text-main: #e2e8f0;
+        --text-sub: #94a3b8;
+        --accent-blue: #00e5ff;
+        --accent-green: #00e676;
+        --accent-red: #ff5252;
+        --border-color: #2d3748;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 16px; line-height: 1.5; padding-bottom: 40px;}
+    
+    /* 顶部标题 */
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-size: 22px; color: var(--accent-blue); text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
+
+    /* Tab 切换栏 */
+    .tabs { display: flex; background: var(--card-bg); border-radius: 10px; padding: 5px; margin-bottom: 20px; border: 1px solid var(--border-color); }
+    .tab-btn { flex: 1; padding: 12px; text-align: center; border-radius: 8px; font-weight: bold; color: var(--text-sub); background: transparent; border: none; transition: 0.3s; cursor: pointer; font-size: 14px;}
+    .tab-btn.active { background: var(--accent-blue); color: #000; box-shadow: 0 2px 10px rgba(0,229,255,0.3); }
+
+    /* 面板容器 */
+    .panel { display: none; animation: fadeIn 0.3s ease; }
+    .panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* 卡片与按钮 */
+    .info-card { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; font-size: 13px; color: var(--text-sub); }
+    .info-card strong { color: var(--accent-blue); }
+    
+    .btn-scan { display: block; width: 100%; padding: 14px; background: linear-gradient(90deg, #00e5ff, #007bff); color: #000; font-size: 16px; font-weight: bold; border: none; border-radius: 10px; margin-bottom: 15px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2); }
+    .btn-scan:active { transform: scale(0.98); }
+    .btn-scan:disabled { background: #334155; color: #94a3b8; box-shadow: none; }
+    .btn-scan.green { background: linear-gradient(90deg, #00e676, #00b0ff); }
+
+    /* 状态提示 */
+    .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; display: none; }
+    .status-box.active { display: block; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: #ffb300; }
+    .status-box.success { background: rgba(0, 230, 118, 0.1); border-color: rgba(0, 230, 118, 0.3); color: var(--accent-green); }
+    
+    /* 数据列表与表格 */
+    .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); display: none; margin-bottom: 15px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+    th { background: #1e2532; color: var(--text-sub); padding: 12px 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
+    th:first-child { text-align: left; }
+    td { padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
+    td:first-child { text-align: left; font-weight: bold; color: #fff; }
+
+    /* 标签 */
+    .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
+    .tag-avoid { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
+    
+    /* 加载动画 */
+    .loading-dots::after { content: ''; animation: dots 1.5s infinite; display: inline-block; width: 20px; text-align: left;}
+    @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } 100% { content: ''; } }
 </style>
 </head>
 <body>
 
-<h2>欧意合约信号扫描</h2>
-<div class="desc">4H EMA多头 + 5m 10K回调策略 (欧意数据源)</div>
-<button class="btn" id="scanBtn" onclick="scanMarket()">开始扫描 (约需1-2分钟)</button>
-<div id="status">等待扫描...</div>
+<div class="header">
+    <h1>⚡ OKX 分层扫盘终端</h1>
+</div>
 
-<table id="resultTable" style="display:none;">
-    <thead>
-        <tr>
-            <th>币种</th><th>4H收盘</th><th>5m信号</th><th>参考价</th><th>现价</th>
-        </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-</table>
+<!-- Tab 切换 -->
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(0)" id="tabBtn0">第一步：4H 选币</button>
+    <button class="tab-btn" onclick="switchTab(1)" id="tabBtn1">第二步：5m 进场</button>
+</div>
+
+<!-- 窗口 1：4H 大趋势过滤 -->
+<div class="panel active" id="panel0">
+    <div class="info-card">
+        <strong>过滤条件 (4H)：</strong><br>
+        1. 价格站上 EMA5 和 EMA20。<br>
+        2. EMA5 向上且大于 EMA20。<br>
+        3. RSI(14) > 50（多头动能强劲）。<br>
+        <span style="color:#ffb300; font-size:12px; margin-top:5px; display:block;">* 扫描完成后，结果会暂存在手机缓存中，切到第二步无需重新抓取 4H 数据。</span>
+    </div>
+    <button class="btn-scan" id="btn4h" onclick="scan4H()">开始扫描 4H 趋势</button>
+    <div class="status-box" id="status4h">准备就绪</div>
+    
+    <div class="table-container" id="table4h">
+        <table>
+            <thead><tr><th>币种</th><th>4H收盘价</th><th>状态</th></tr></thead>
+            <tbody id="tbody4h"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 窗口 2：5m 精准入场 -->
+<div class="panel" id="panel1">
+    <div class="info-card">
+        <strong>进场条件 (5m)：</strong><br>
+        1. 价格回踩至最近 10 根 K 线最低点附近 (0.15%内)。<br>
+        2. 回调K线必须缩量（防接飞刀）。<br>
+        <span style="color:#ffb300; font-size:12px; margin-top:5px; display:block;">* 只扫描上一步筛选出的币种。若未进行第一步，请先返回。</span>
+    </div>
+    <button class="btn-scan green" id="btn5m" onclick="scan5M()">开始扫描 5m 入场点</button>
+    <div class="status-box" id="status5m">准备就绪</div>
+
+    <div class="table-container" id="table5m">
+        <table>
+            <thead>
+                <tr><th>币种</th><th>信号</th><th>支撑价</th><th>现价</th></tr>
+            </thead>
+            <tbody id="tbody5m"></tbody>
+        </table>
+    </div>
+</div>
 
 <script>
-// 使用欧意专门给开发者提供的备用 CDN 域名，国内连通性极佳
-const BASE_URL = "https://www.okx.com"; 
+const BASE_URL = "https://data-api.binance.vision"; // 使用最稳定的币安数据源
 const TOP_N = 100;
+let cachedCoins = []; // 用于存储第一步选出的币
 
-// 获取成交额前100的USDT永续合约
-async function getTopSwapSymbols() {
-    const res = await fetch(`${BASE_URL}/api/v5/market/tickers?instType=SWAP`);
-    const json = await res.json();
-    let data = json.data.filter(d => d.instId.endsWith("-USDT-SWAP"));
-    data.sort((a, b) => parseFloat(b.volCcy24h) - parseFloat(a.volCcy24h));
-    return data.slice(0, TOP_N).map(d => d.instId);
+// UI 切换逻辑
+function switchTab(index) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('panel' + index).classList.add('active');
+    document.getElementById('tabBtn' + index).classList.add('active');
 }
 
-// 获取K线数据（欧意返回的是倒序，需要 reverse）
-async function fetchKlines(instId, bar, limit=60) {
-    const res = await fetch(`${BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${limit}`);
+// 基础请求函数
+async function getTopSwapSymbols() {
+    const res = await fetch(`${BASE_URL}/api/v3/ticker/24hr`);
     const json = await res.json();
-    return json.data.reverse().map(d => ({
-        open: parseFloat(d[1]), high: parseFloat(d[2]),
-        low: parseFloat(d[3]), close: parseFloat(d[4])
+    let data = json.filter(d => d.symbol.endsWith("USDT") && !d.symbol.includes("UP") && !d.symbol.includes("DOWN"));
+    data.sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
+    return data.slice(0, TOP_N).map(d => d.symbol);
+}
+
+async function fetchKlines(symbol, interval, limit=60) {
+    const res = await fetch(`${BASE_URL}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+    const json = await res.json();
+    return json.map(d => ({
+        open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]), volume: parseFloat(d[5])
     }));
 }
 
-// 计算EMA
+// 技术指标
 function calcEMA(klines, period) {
-    let ema = [];
-    let k = 2 / (period + 1);
-    let prevEma = klines[0].close;
-    for (let i = 0; i < klines.length; i++) {
-        prevEma = (klines[i].close - prevEma) * k + prevEma;
-        ema.push(prevEma);
-    }
+    let ema = [], k = 2 / (period + 1), prevEma = klines[0].close;
+    for (let i = 0; i < klines.length; i++) { prevEma = (klines[i].close - prevEma) * k + prevEma; ema.push(prevEma); }
     return ema;
 }
-
-// 检查4H趋势
-function check4HTrend(klines) {
-    if (klines.length < 30) return { trendOk: false };
-    const ema5 = calcEMA(klines, 5);
-    const ema20 = calcEMA(klines, 20);
-    const lastIdx = klines.length - 1;
-    const close = klines[lastIdx].close;
-    const e5 = ema5[lastIdx], e20 = ema20[lastIdx];
-    const e5Prev = ema5[lastIdx - 1];
-    
-    // 收盘价站上两线，EMA5>EMA20，且EMA5向上
-    const trendOk = (close > e5) && (close > e20) && (e5 > e20) && (e5 > e5Prev);
-    return { trendOk, close };
+function calcRSI(klines, period = 14) {
+    if (klines.length <= period) return 50;
+    let gains = 0, losses = 0;
+    for (let i = 1; i <= period; i++) {
+        let diff = klines[i].close - klines[i-1].close;
+        if (diff >= 0) gains += diff; else losses -= diff;
+    }
+    let avgGain = gains / period, avgLoss = losses / period;
+    for (let i = period + 1; i < klines.length; i++) {
+        let diff = klines[i].close - klines[i-1].close;
+        avgGain = ((avgGain * (period - 1)) + (diff > 0 ? diff : 0)) / period;
+        avgLoss = ((avgLoss * (period - 1)) + (diff < 0 ? -diff : 0)) / period;
+    }
+    return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
 }
 
-// 检查5m入场
-function check5mEntry(klines) {
-    if (klines.length < 10) return null;
-    const last10 = klines.slice(-10);
-    const high10 = Math.max(...last10.map(k => k.high));
-    const low10 = Math.min(...last10.map(k => k.low));
-    const currentPrice = klines[klines.length - 1].close;
-    const threshold = 0.0015; // 0.15% 容差
-
-    const nearLow = Math.abs(currentPrice - low10) / low10 <= threshold;
-    const nearHigh = Math.abs(currentPrice - high10) / high10 <= threshold;
-
-    if (nearLow) return { signal: "LONG", refPrice: low10, current: currentPrice };
-    if (nearHigh) return { signal: "AVOID", refPrice: high10, current: currentPrice };
-    return null;
-}
-
-// 主扫描函数
-async function scanMarket() {
-    const btn = document.getElementById('scanBtn');
-    const status = document.getElementById('status');
-    const table = document.getElementById('resultTable');
-    const tbody = document.getElementById('tableBody');
+// ================= 第一步：扫描 4H =================
+async function scan4H() {
+    const btn = document.getElementById('btn4h');
+    const status = document.getElementById('status4h');
+    const table = document.getElementById('table4h');
+    const tbody = document.getElementById('tbody4h');
     
-    btn.disabled = true;
-    btn.innerText = "正在扫描，请保持屏幕常亮...";
-    tbody.innerHTML = "";
-    table.style.display = "table";
-    let count = 0;
+    btn.disabled = true; btn.innerText = "正在扫描 4H...";
+    status.className = "status-box active loading-dots"; status.innerText = "正在获取前100币种";
+    tbody.innerHTML = ""; table.style.display = "block";
+    cachedCoins = []; 
 
     try {
-        status.innerText = "正在获取成交额前100的币种...";
         const symbols = await getTopSwapSymbols();
-        
         for (let i = 0; i < symbols.length; i++) {
             const sym = symbols[i];
-            // 欧意返回的名字是 BTC-USDT-SWAP，为了表格好看，去掉后缀
-            const displaySym = sym.replace("-USDT-SWAP", "");
-            status.innerText = `正在分析 (${i+1}/${symbols.length}): ${displaySym}`;
+            status.innerText = `正在分析 (${i+1}/${symbols.length}): ${sym.replace("USDT", "")}`;
             
             try {
-                const k4h = await fetchKlines(sym, "4H", 60);
-                if (k4h.length === 0) continue;
+                const k4h = await fetchKlines(sym, "4h", 60);
+                if (k4h.length < 30) continue;
                 
-                const check4h = check4HTrend(k4h);
-                if (!check4h.trendOk) continue;
-
-                const k5m = await fetchKlines(sym, "5m", 30);
-                const entry = check5mEntry(k5m);
+                const ema5 = calcEMA(k4h, 5), ema20 = calcEMA(k4h, 20), rsi = calcRSI(k4h, 14);
+                const lastIdx = k4h.length - 1, close = k4h[lastIdx].close;
+                const e5 = ema5[lastIdx], e20 = ema20[lastIdx], e5Prev = ema5[lastIdx - 1];
                 
-                if (entry) {
+                // 核心条件：EMA多头 + RSI > 50
+                if ((close > e5) && (close > e20) && (e5 > e20) && (e5 > e5Prev) && (rsi > 50)) {
+                    const displaySym = sym.replace("USDT", "");
+                    cachedCoins.push({ symbol: sym, display: displaySym, close: close });
+                    
                     const tr = document.createElement('tr');
-                    const cls = entry.signal === "LONG" ? "long" : "avoid";
-                    tr.innerHTML = `
-                        <td>${displaySym}</td>
-                        <td>${check4h.close.toFixed(6)}</td>
-                        <td class="${cls}">${entry.signal}</td>
-                        <td>${entry.refPrice.toFixed(6)}</td>
-                        <td>${entry.current.toFixed(6)}</td>
-                    `;
+                    tr.innerHTML = `<td>${displaySym}</td><td style="color:#aaa">${formatPrice(close)}</td><td><span class="tag-long">4H多头</span></td>`;
                     tbody.appendChild(tr);
-                    count++;
                 }
-                
-                await new Promise(r => setTimeout(r, 150));
-                
-            } catch (e) {
-                console.error(sym, "请求失败", e);
-            }
+                await new Promise(r => setTimeout(r, 120)); // 稍微加速
+            } catch (e) { console.error(sym, e); }
         }
-        status.innerText = `扫描完成！共发现 ${count} 个符合信号。`;
+        
+        // 【核心动作】：把结果存入浏览器本地缓存
+        localStorage.setItem('okx_4h_cache', JSON.stringify(cachedCoins));
+        
+        status.className = "status-box success";
+        status.innerText = `4H 过滤完成！选出 ${cachedCoins.length} 个币，已存入缓存。`;
+        if(cachedCoins.length > 0) {
+            setTimeout(() => switchTab(1), 1000); // 自动跳到第二步
+        }
     } catch (err) {
-        status.innerText = `请求失败，请检查网络或关闭VPN重试。`;
-        console.error(err);
+        status.className = "status-box active"; status.innerText = "网络错误，请重试。";
     } finally {
-        btn.disabled = false;
-        btn.innerText = "重新扫描";
+        btn.disabled = false; btn.innerText = "重新扫描 4H 趋势";
     }
 }
+
+// ================= 第二步：扫描 5m =================
+async function scan5M() {
+    const btn = document.getElementById('btn5m');
+    const status = document.getElementById('status5m');
+    const table = document.getElementById('table5m');
+    const tbody = document.getElementById('tbody5m');
+    
+    // 从缓存读取 4H 筛选结果
+    const cacheStr = localStorage.getItem('okx_4h_cache');
+    if (!cacheStr) {
+        alert("请先在第一步完成 4H 扫描！"); return;
+    }
+    
+    const coinsToScan = JSON.parse(cacheStr);
+    if (coinsToScan.length === 0) {
+        alert("第一步没有选出符合条件的币，请重新扫描。"); return;
+    }
+
+    btn.disabled = true; btn.innerText = "正在寻找进场点...";
+    status.className = "status-box active loading-dots";
+    tbody.innerHTML = ""; table.style.display = "block";
+    let entryCount = 0;
+
+    try {
+        for (let i = 0; i < coinsToScan.length; i++) {
+            const coin = coinsToScan[i];
+            status.innerText = `寻找入场点 (${i+1}/${coinsToScan.length}): ${coin.display}`;
+            
+            try {
+                const k5m = await fetchKlines(coin.symbol, "5m", 30);
+                if (k5m.length < 15) continue;
+                
+                const last10 = k5m.slice(-10);
+                const high10 = Math.max(...last10.map(k => k.high));
+                const low10 = Math.min(...last10.map(k => k.low));
+                const currentPrice = k5m[k5m.length - 1].close;
+                const currentVol = k5m[k5m.length - 1].volume;
+                const avgVol = last10.reduce((sum, k) => sum + k.volume, 0) / 10;
+                
+                const threshold = 0.0015;
+                const nearLow = Math.abs(currentPrice - low10) / low10 <= threshold;
+                const nearHigh = Math.abs(currentPrice - high10) / high10 <= threshold;
+                const volumeOk = currentVol < (avgVol * 1.5); // 缩量防飞刀
+
+                let signalType = null;
+                let refPrice = 0;
+
+                if (nearLow && volumeOk) { signalType = "LONG"; refPrice = low10; }
+                else if (nearHigh) { signalType = "AVOID"; refPrice = high10; }
+
+                if (signalType) {
+                    const tr = document.createElement('tr');
+                    const tagClass = signalType === "LONG" ? "tag-long" : "tag-avoid";
+                    const tagText = signalType === "LONG" ? "做多" : "观望";
+                    tr.innerHTML = `
+                        <td>${coin.display}</td>
+                        <td><span class="${tagClass}">${tagText}</span></td>
+                        <td style="color:#00e5ff">${formatPrice(refPrice)}</td>
+                        <td style="color:#fff">${formatPrice(currentPrice)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                    entryCount++;
+                }
+                await new Promise(r => setTimeout(r, 150));
+            } catch (e) { console.error(coin.symbol, e); }
+        }
+        
+        status.className = "status-box success";
+        status.innerText = `扫描完成！在 ${coinsToScan.length} 个多头币中，找到 ${entryCount} 个入场信号。`;
+    } catch (err) {
+        status.className = "status-box active"; status.innerText = "网络错误，请重试。";
+    } finally {
+        btn.disabled = false; btn.innerText = "重新寻找入场点";
+    }
+}
+
+// 价格格式化
+function formatPrice(price) {
+    if (price >= 100) return price.toFixed(2);
+    if (price >= 1) return price.toFixed(4);
+    if (price >= 0.01) return price.toFixed(5);
+    return price.toFixed(6);
+}
+
+// 页面加载时，恢复缓存数据展示（如果你刷新了页面，第一步的表格还会存在）
+window.onload = function() {
+    const cache = localStorage.getItem('okx_4h_cache');
+    if (cache) {
+        cachedCoins = JSON.parse(cache);
+        if (cachedCoins.length > 0) {
+            const tbody = document.getElementById('tbody4h');
+            document.getElementById('table4h').style.display = "block";
+            cachedCoins.forEach(coin => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${coin.display}</td><td style="color:#aaa">${formatPrice(coin.close)}</td><td><span class="tag-long">4H多头</span></td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('status4h').className = "status-box success";
+            document.getElementById('status4h').innerText = `已读取历史缓存：${cachedCoins.length} 个多头币。`;
+        }
+    }
+};
 </script>
 
 </body>
