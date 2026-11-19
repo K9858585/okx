@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OKX 合约信号扫描</title>
+<title>币安合约信号扫描</title>
 <style>
     body { font-family: sans-serif; padding: 15px; background: #111; color: #eee; }
-    h2 { text-align: center; color: #00e5ff; margin-bottom: 5px;}
+    h2 { text-align: center; color: #f3ba2f; margin-bottom: 5px;} /* 币安黄 */
     .desc { text-align: center; color: #888; font-size: 12px; margin-bottom: 15px;}
     #status { text-align: center; color: #ffb300; margin-bottom: 15px; font-weight: bold; font-size: 14px; min-height: 20px;}
     table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
@@ -14,15 +14,15 @@
     th { background: #222; color: #aaa; }
     .long { color: #00e676; font-weight: bold; }
     .avoid { color: #ff5252; font-weight: bold; }
-    .btn { display: block; width: 100%; padding: 12px; background: #00e5ff; color: #000; 
+    .btn { display: block; width: 100%; padding: 12px; background: #f3ba2f; color: #000; 
            text-align: center; font-weight: bold; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 15px; }
     .btn:disabled { background: #555; color: #aaa; }
 </style>
 </head>
 <body>
 
-<h2>OKX 合约信号扫描</h2>
-<div class="desc">4H EMA多头 + 5m 10K回调策略</div>
+<h2>币安合约信号扫描</h2>
+<div class="desc">4H EMA多头 + 5m 10K回调策略 (币安数据源)</div>
 <button class="btn" id="scanBtn" onclick="scanMarket()">开始扫描 (约需1-2分钟)</button>
 <div id="status">等待扫描...</div>
 
@@ -36,48 +36,32 @@
 </table>
 
 <script>
-// 提供多个备用代理，防止单一代理挂掉
-const PROXIES = [
-    "https://api.codetabs.com/v1/proxy?quest=",
-    "https://corsproxy.io/?",
-    "https://api.allorigins.win/raw?url="
-];
-const BASE_URL = "https://www.okx.com";
+// 使用币安官方公共数据镜像接口（对浏览器非常友好）
+const BASE_URL = "https://data-api.binance.vision";
 const TOP_N = 100;
 
-// 带超时和重试的请求函数
-async function fetchWithFallback(urlStr) {
-    for (let proxy of PROXIES) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
-            const res = await fetch(proxy + encodeURIComponent(urlStr), { signal: controller.signal });
-            clearTimeout(timeoutId);
-            if (res.ok) {
-                return await res.json();
-            }
-        } catch (e) {
-            console.warn("代理失败，尝试下一个...", proxy);
-        }
-    }
-    throw new Error("所有代理均失败");
-}
-
+// 获取成交额前100的USDT合约
 async function getTopSwapSymbols() {
-    const json = await fetchWithFallback(`${BASE_URL}/api/v5/market/tickers?instType=SWAP`);
-    let data = json.data.filter(d => d.instId.endsWith("-USDT-SWAP"));
-    data.sort((a, b) => parseFloat(b.volCcy24h) - parseFloat(a.volCcy24h));
-    return data.slice(0, TOP_N).map(d => d.instId);
+    const res = await fetch(`${BASE_URL}/api/v3/ticker/24hr`);
+    const json = await res.json();
+    // 过滤出 USDT 交易对，并排除一些杠杆代币
+    let data = json.filter(d => d.symbol.endsWith("USDT") && !d.symbol.includes("UP") && !d.symbol.includes("DOWN"));
+    // 按 24 小时成交额降序排序
+    data.sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
+    return data.slice(0, TOP_N).map(d => d.symbol);
 }
 
-async function fetchKlines(instId, bar, limit=60) {
-    const json = await fetchWithFallback(`${BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${limit}`);
-    return json.data.reverse().map(d => ({
+// 获取K线数据（币安默认返回正序，无需反转）
+async function fetchKlines(symbol, interval, limit=60) {
+    const res = await fetch(`${BASE_URL}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+    const json = await res.json();
+    return json.map(d => ({
         open: parseFloat(d[1]), high: parseFloat(d[2]),
-        low: parseFloat(d[3]), close: parseFloat(d[4]), confirm: d[8] === "1"
+        low: parseFloat(d[3]), close: parseFloat(d[4])
     }));
 }
 
+// 计算EMA
 function calcEMA(klines, period) {
     let ema = [];
     let k = 2 / (period + 1);
@@ -89,6 +73,7 @@ function calcEMA(klines, period) {
     return ema;
 }
 
+// 检查4H趋势
 function check4HTrend(klines) {
     if (klines.length < 30) return { trendOk: false };
     const ema5 = calcEMA(klines, 5);
@@ -98,17 +83,19 @@ function check4HTrend(klines) {
     const e5 = ema5[lastIdx], e20 = ema20[lastIdx];
     const e5Prev = ema5[lastIdx - 1];
     
+    // 收盘价站上两线，EMA5>EMA20，且EMA5向上
     const trendOk = (close > e5) && (close > e20) && (e5 > e20) && (e5 > e5Prev);
     return { trendOk, close };
 }
 
+// 检查5m入场
 function check5mEntry(klines) {
     if (klines.length < 10) return null;
     const last10 = klines.slice(-10);
     const high10 = Math.max(...last10.map(k => k.high));
     const low10 = Math.min(...last10.map(k => k.low));
     const currentPrice = klines[klines.length - 1].close;
-    const threshold = 0.0015;
+    const threshold = 0.0015; // 0.15% 容差
 
     const nearLow = Math.abs(currentPrice - low10) / low10 <= threshold;
     const nearHigh = Math.abs(currentPrice - high10) / high10 <= threshold;
@@ -118,6 +105,7 @@ function check5mEntry(klines) {
     return null;
 }
 
+// 主扫描函数
 async function scanMarket() {
     const btn = document.getElementById('scanBtn');
     const status = document.getElementById('status');
@@ -139,12 +127,14 @@ async function scanMarket() {
             status.innerText = `正在分析 (${i+1}/${symbols.length}): ${sym}`;
             
             try {
-                const k4h = await fetchKlines(sym, "4H", 60);
+                // 获取 4H K线 (币安的4小时是 '4h')
+                const k4h = await fetchKlines(sym, "4h", 60);
                 if (k4h.length === 0) continue;
                 
                 const check4h = check4HTrend(k4h);
-                if (!check4h.trendOk) continue;
+                if (!check4h.trendOk) continue; // 趋势不符跳过
 
+                // 获取 5m K线
                 const k5m = await fetchKlines(sym, "5m", 30);
                 const entry = check5mEntry(k5m);
                 
@@ -152,7 +142,7 @@ async function scanMarket() {
                     const tr = document.createElement('tr');
                     const cls = entry.signal === "LONG" ? "long" : "avoid";
                     tr.innerHTML = `
-                        <td>${sym.replace("-USDT-SWAP", "")}</td>
+                        <td>${sym}</td>
                         <td>${check4h.close.toFixed(6)}</td>
                         <td class="${cls}">${entry.signal}</td>
                         <td>${entry.refPrice.toFixed(6)}</td>
@@ -161,14 +151,17 @@ async function scanMarket() {
                     tbody.appendChild(tr);
                     count++;
                 }
-                await new Promise(r => setTimeout(r, 300));
+                
+                // 延迟 150 毫秒，防止请求过快被封
+                await new Promise(r => setTimeout(r, 150));
+                
             } catch (e) {
                 console.error(sym, "请求失败", e);
             }
         }
         status.innerText = `扫描完成！共发现 ${count} 个符合信号。`;
     } catch (err) {
-        status.innerText = `请求失败！请关闭VPN后，点击重新扫描。`;
+        status.innerText = `请求失败，请检查网络。`;
         console.error(err);
     } finally {
         btn.disabled = false;
