@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V11 (阴线找底版)</title>
+<title>OKX 极值系统 V12 (10根K线)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -47,7 +47,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V11 (阴线找底)</h1>
+    <h1>⚡ 极值系统 V12 (10根K线)</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -77,7 +77,7 @@
 </div>
 
 <div class="section-header">
-    <div class="section-title">5m 阴线踩底 / 阳线探顶</div>
+    <div class="section-title">5m 阴线踩底 / 阳线探顶 (10K极值)</div>
 </div>
 <div class="table-container">
     <table>
@@ -157,7 +157,7 @@ function calcRSI(klines, period = 14) {
     return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
 }
 
-// ================= 扫描 4H (不变) =================
+// ================= 扫描 4H =================
 async function scan4H() {
     if (isScanning) return;
     isScanning = true;
@@ -213,7 +213,7 @@ async function scan4H() {
     isScanning = false;
 }
 
-// ================= 扫描 5M (阴线找底/阳线探顶逻辑) =================
+// ================= 扫描 5M (10根逻辑) =================
 async function scan5M() {
     if (isScanning) return;
     isScanning = true;
@@ -235,14 +235,16 @@ async function scan5M() {
         const item = cachedCoins[i];
         const data5m = await fetchKlinesData(item.coin, "5m");
         
-        if (data5m.closed.length < 31 || !data5m.current) continue;
+        // 【修改点】：要求已收盘数据至少 11 根（1根当前 + 10根历史）
+        if (data5m.closed.length < 11 || !data5m.current) continue;
         
         const latestClosed = data5m.closed[data5m.closed.length - 1];
-        const prev30 = data5m.closed.slice(-31, -1); 
+        // 【修改点】：截取前 10 根
+        const prev10 = data5m.closed.slice(-11, -1); 
         
-        // 获取前30根的基础极值，用于兜底
-        const maxHigh30 = Math.max(...prev30.map(k => k.high));
-        const minLow30 = Math.min(...prev30.map(k => k.low));
+        // 获取前10根的基础极值，用于兜底
+        const maxHigh10 = Math.max(...prev10.map(k => k.high));
+        const minLow10 = Math.min(...prev10.map(k => k.low));
         
         const realTimePrice = data5m.current.close;
         
@@ -252,11 +254,11 @@ async function scan5M() {
         // 误差范围：0.15% (触碰或接近)
         const tolerance = 0.0015;
 
-        // === 做多逻辑：当前收阴，寻找前30根阴线的最低点 ===
+        // === 做多逻辑：当前收阴，寻找前10根阴线的最低点 ===
         if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
-            // 提取前30根里的阴线
-            const bearishK = prev30.filter(k => k.close < k.open);
-            let targetLow = minLow30; // 兜底：如果30根全是阳线，就用前30根最低点
+            // 提取前10根里的阴线
+            const bearishK = prev10.filter(k => k.close < k.open);
+            let targetLow = minLow10; // 兜底：如果10根全是阳线，就用前10根最低点
             
             if (bearishK.length > 0) {
                 // 取所有阴线里的最低点
@@ -278,11 +280,11 @@ async function scan5M() {
             }
         }
         
-        // === 做空逻辑：当前收阳，寻找前30根阳线的最高点 ===
+        // === 做空逻辑：当前收阳，寻找前10根阳线的最高点 ===
         else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
-            // 提取前30根里的阳线
-            const bullishK = prev30.filter(k => k.close > k.open);
-            let targetHigh = maxHigh30; // 兜底
+            // 提取前10根里的阳线
+            const bullishK = prev10.filter(k => k.close > k.open);
+            let targetHigh = maxHigh10; // 兜底
             
             if (bullishK.length > 0) {
                 // 取所有阳线里的最高点
@@ -326,10 +328,10 @@ async function scan5M() {
     if (entryCount > 0) {
         let isBlink = false;
         let blinkTimer = setInterval(() => {
-            document.title = isBlink ? "🚨 发现阴线踩底！" : "⚡ V11 巡航中";
+            document.title = isBlink ? "🚨 发现阴线踩底！" : "⚡ V12 巡航中";
             isBlink = !isBlink;
         }, 1000);
-        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 极值系统 V11"; }, 10000); 
+        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 极值系统 V12"; }, 10000); 
     }
     isScanning = false;
 }
