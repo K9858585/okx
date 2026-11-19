@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V10 (双底双顶版)</title>
+<title>OKX 极值系统 V11 (阴线找底版)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -47,7 +47,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 极值双底双顶 V10</h1>
+    <h1>⚡ 极值系统 V11 (阴线找底)</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -77,11 +77,11 @@
 </div>
 
 <div class="section-header">
-    <div class="section-title">5m 双底/双顶确认 (支撑阻力位)</div>
+    <div class="section-title">5m 阴线踩底 / 阳线探顶</div>
 </div>
 <div class="table-container">
     <table>
-        <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>收盘价</th></tr></thead>
+        <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>当前收盘</th></tr></thead>
         <tbody id="tbody5m"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
     </table>
 </div>
@@ -157,7 +157,7 @@ function calcRSI(klines, period = 14) {
     return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
 }
 
-// ================= 扫描 4H =================
+// ================= 扫描 4H (不变) =================
 async function scan4H() {
     if (isScanning) return;
     isScanning = true;
@@ -213,7 +213,7 @@ async function scan4H() {
     isScanning = false;
 }
 
-// ================= 扫描 5M (双底/双顶逻辑) =================
+// ================= 扫描 5M (阴线找底/阳线探顶逻辑) =================
 async function scan5M() {
     if (isScanning) return;
     isScanning = true;
@@ -228,7 +228,7 @@ async function scan5M() {
         return;
     }
 
-    status.innerText = "⏳ 5M 整点收盘，正在寻找双底/双顶形态...";
+    status.innerText = "⏳ 5M 整点收盘，正在寻找阴线踩底/阳线探顶...";
     let entryCount = 0;
 
     for (let i = 0; i < cachedCoins.length; i++) {
@@ -240,7 +240,7 @@ async function scan5M() {
         const latestClosed = data5m.closed[data5m.closed.length - 1];
         const prev30 = data5m.closed.slice(-31, -1); 
         
-        // 【核心改变】：取前30根K线的高低价（影线），作为支撑阻力
+        // 获取前30根的基础极值，用于兜底
         const maxHigh30 = Math.max(...prev30.map(k => k.high));
         const minLow30 = Math.min(...prev30.map(k => k.low));
         
@@ -249,39 +249,57 @@ async function scan5M() {
         let signalType = null;
         let keyPrice = 0;
 
-        // 误差范围：0.15%
+        // 误差范围：0.15% (触碰或接近)
         const tolerance = 0.0015;
 
-        // 做多（双底）：最低价触碰前低，但收盘价收回（收在前低之上）
-        if (item.trend === "LONG" && latestClosed.low <= minLow30 * (1 + tolerance)) {
-            if (latestClosed.close > minLow30 * 0.999) { // 收盘价没有被死死按在下面
-                // 防砸盘：实体跌幅不能太大，或者有长下影线
+        // === 做多逻辑：当前收阴，寻找前30根阴线的最低点 ===
+        if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
+            // 提取前30根里的阴线
+            const bearishK = prev30.filter(k => k.close < k.open);
+            let targetLow = minLow30; // 兜底：如果30根全是阳线，就用前30根最低点
+            
+            if (bearishK.length > 0) {
+                // 取所有阴线里的最低点
+                targetLow = Math.min(...bearishK.map(k => k.low));
+            }
+
+            // 当前阴线的最低点是否突破或接近 targetLow
+            if (latestClosed.low <= targetLow * (1 + tolerance)) {
+                // 防砸盘：实体跌幅不能过大(>1%)，否则如果有下影线可以豁免
                 const bodyDrop = (latestClosed.open - latestClosed.close) / latestClosed.open;
                 const lowerShadow = latestClosed.close - latestClosed.low;
                 
-                // 如果是大阴线(>1%) 并且没有下影线(下影线不足实体的1倍)，则不接
                 if (!(bodyDrop > 0.01 && lowerShadow < (latestClosed.open - latestClosed.close))) {
                     signalType = "LONG";
-                    keyPrice = minLow30;
+                    keyPrice = targetLow;
                     
-                    // 实时价格不能跌穿支撑太多
-                    if (realTimePrice < minLow30 * 0.985) signalType = null; 
+                    if (realTimePrice < targetLow * 0.985) signalType = null; 
                 }
             }
         }
         
-        // 做空（双顶）：最高价触碰前高，但收盘价被压回（收在前高之下）
-        else if (item.trend === "SHORT" && latestClosed.high >= maxHigh30 * (1 - tolerance)) {
-            if (latestClosed.close < maxHigh30 * 1.001) {
+        // === 做空逻辑：当前收阳，寻找前30根阳线的最高点 ===
+        else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
+            // 提取前30根里的阳线
+            const bullishK = prev30.filter(k => k.close > k.open);
+            let targetHigh = maxHigh30; // 兜底
+            
+            if (bullishK.length > 0) {
+                // 取所有阳线里的最高点
+                targetHigh = Math.max(...bullishK.map(k => k.high));
+            }
+
+            // 当前阳线的最高点是否突破或接近 targetHigh
+            if (latestClosed.high >= targetHigh * (1 - tolerance)) {
+                // 防拉飞：实体涨幅不能过大(>1%)，否则如果有上影线可以豁免
                 const bodyRise = (latestClosed.close - latestClosed.open) / latestClosed.open;
                 const upperShadow = latestClosed.high - latestClosed.close;
                 
-                // 如果是大阳线(>1%) 并且没有上影线(上影线不足实体的1倍)，则不追
                 if (!(bodyRise > 0.01 && upperShadow < (latestClosed.close - latestClosed.open))) {
                     signalType = "SHORT";
-                    keyPrice = maxHigh30;
+                    keyPrice = targetHigh;
                     
-                    if (realTimePrice > maxHigh30 * 1.015) signalType = null;
+                    if (realTimePrice > targetHigh * 1.015) signalType = null;
                 }
             }
         }
@@ -289,7 +307,7 @@ async function scan5M() {
         if (signalType) {
             const tr = document.createElement('tr');
             const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
-            const tagText = signalType === "LONG" ? "双底做多" : "双顶做空";
+            const tagText = signalType === "LONG" ? "阴线踩底" : "阳线探顶";
             
             tr.innerHTML = `
                 <td>${item.coin}</td>
@@ -303,15 +321,15 @@ async function scan5M() {
         await new Promise(r => setTimeout(r, 150)); 
     }
     
-    status.innerText = `✅ 巡检完毕，发现 ${entryCount} 个双底/双顶形态。`;
+    status.innerText = `✅ 巡检完毕，发现 ${entryCount} 个阴线踩底/阳线探顶。`;
     
     if (entryCount > 0) {
         let isBlink = false;
         let blinkTimer = setInterval(() => {
-            document.title = isBlink ? "🚨 发现双底/双顶！" : "⚡ 双底双顶巡航中";
+            document.title = isBlink ? "🚨 发现阴线踩底！" : "⚡ V11 巡航中";
             isBlink = !isBlink;
         }, 1000);
-        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 极值双底双顶 V10"; }, 10000); 
+        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 极值系统 V11"; }, 10000); 
     }
     isScanning = false;
 }
