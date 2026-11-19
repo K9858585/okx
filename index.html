@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>币安合约信号扫描</title>
+<title>欧意合约信号扫描</title>
 <style>
     body { font-family: sans-serif; padding: 15px; background: #111; color: #eee; }
-    h2 { text-align: center; color: #f3ba2f; margin-bottom: 5px;} /* 币安黄 */
+    h2 { text-align: center; color: #00e5ff; margin-bottom: 5px;} /* 欧意蓝 */
     .desc { text-align: center; color: #888; font-size: 12px; margin-bottom: 15px;}
     #status { text-align: center; color: #ffb300; margin-bottom: 15px; font-weight: bold; font-size: 14px; min-height: 20px;}
     table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
@@ -14,15 +14,15 @@
     th { background: #222; color: #aaa; }
     .long { color: #00e676; font-weight: bold; }
     .avoid { color: #ff5252; font-weight: bold; }
-    .btn { display: block; width: 100%; padding: 12px; background: #f3ba2f; color: #000; 
+    .btn { display: block; width: 100%; padding: 12px; background: #00e5ff; color: #000; 
            text-align: center; font-weight: bold; border: none; border-radius: 5px; font-size: 16px; margin-bottom: 15px; }
     .btn:disabled { background: #555; color: #aaa; }
 </style>
 </head>
 <body>
 
-<h2>币安合约信号扫描</h2>
-<div class="desc">4H EMA多头 + 5m 10K回调策略 (币安数据源)</div>
+<h2>欧意合约信号扫描</h2>
+<div class="desc">4H EMA多头 + 5m 10K回调策略 (欧意数据源)</div>
 <button class="btn" id="scanBtn" onclick="scanMarket()">开始扫描 (约需1-2分钟)</button>
 <div id="status">等待扫描...</div>
 
@@ -36,26 +36,24 @@
 </table>
 
 <script>
-// 使用币安官方公共数据镜像接口（对浏览器非常友好）
-const BASE_URL = "https://data-api.binance.vision";
+// 使用欧意专门给开发者提供的备用 CDN 域名，国内连通性极佳
+const BASE_URL = "https://www.okx.com"; 
 const TOP_N = 100;
 
-// 获取成交额前100的USDT合约
+// 获取成交额前100的USDT永续合约
 async function getTopSwapSymbols() {
-    const res = await fetch(`${BASE_URL}/api/v3/ticker/24hr`);
+    const res = await fetch(`${BASE_URL}/api/v5/market/tickers?instType=SWAP`);
     const json = await res.json();
-    // 过滤出 USDT 交易对，并排除一些杠杆代币
-    let data = json.filter(d => d.symbol.endsWith("USDT") && !d.symbol.includes("UP") && !d.symbol.includes("DOWN"));
-    // 按 24 小时成交额降序排序
-    data.sort((a, b) => parseFloat(b.quoteVolume) - parseFloat(a.quoteVolume));
-    return data.slice(0, TOP_N).map(d => d.symbol);
+    let data = json.data.filter(d => d.instId.endsWith("-USDT-SWAP"));
+    data.sort((a, b) => parseFloat(b.volCcy24h) - parseFloat(a.volCcy24h));
+    return data.slice(0, TOP_N).map(d => d.instId);
 }
 
-// 获取K线数据（币安默认返回正序，无需反转）
-async function fetchKlines(symbol, interval, limit=60) {
-    const res = await fetch(`${BASE_URL}/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`);
+// 获取K线数据（欧意返回的是倒序，需要 reverse）
+async function fetchKlines(instId, bar, limit=60) {
+    const res = await fetch(`${BASE_URL}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${limit}`);
     const json = await res.json();
-    return json.map(d => ({
+    return json.data.reverse().map(d => ({
         open: parseFloat(d[1]), high: parseFloat(d[2]),
         low: parseFloat(d[3]), close: parseFloat(d[4])
     }));
@@ -124,17 +122,17 @@ async function scanMarket() {
         
         for (let i = 0; i < symbols.length; i++) {
             const sym = symbols[i];
-            status.innerText = `正在分析 (${i+1}/${symbols.length}): ${sym}`;
+            // 欧意返回的名字是 BTC-USDT-SWAP，为了表格好看，去掉后缀
+            const displaySym = sym.replace("-USDT-SWAP", "");
+            status.innerText = `正在分析 (${i+1}/${symbols.length}): ${displaySym}`;
             
             try {
-                // 获取 4H K线 (币安的4小时是 '4h')
-                const k4h = await fetchKlines(sym, "4h", 60);
+                const k4h = await fetchKlines(sym, "4H", 60);
                 if (k4h.length === 0) continue;
                 
                 const check4h = check4HTrend(k4h);
-                if (!check4h.trendOk) continue; // 趋势不符跳过
+                if (!check4h.trendOk) continue;
 
-                // 获取 5m K线
                 const k5m = await fetchKlines(sym, "5m", 30);
                 const entry = check5mEntry(k5m);
                 
@@ -142,7 +140,7 @@ async function scanMarket() {
                     const tr = document.createElement('tr');
                     const cls = entry.signal === "LONG" ? "long" : "avoid";
                     tr.innerHTML = `
-                        <td>${sym}</td>
+                        <td>${displaySym}</td>
                         <td>${check4h.close.toFixed(6)}</td>
                         <td class="${cls}">${entry.signal}</td>
                         <td>${entry.refPrice.toFixed(6)}</td>
@@ -152,7 +150,6 @@ async function scanMarket() {
                     count++;
                 }
                 
-                // 延迟 150 毫秒，防止请求过快被封
                 await new Promise(r => setTimeout(r, 150));
                 
             } catch (e) {
@@ -161,7 +158,7 @@ async function scanMarket() {
         }
         status.innerText = `扫描完成！共发现 ${count} 个符合信号。`;
     } catch (err) {
-        status.innerText = `请求失败，请检查网络。`;
+        status.innerText = `请求失败，请检查网络或关闭VPN重试。`;
         console.error(err);
     } finally {
         btn.disabled = false;
