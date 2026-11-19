@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 全自动极值系统 V6</title>
+<title>OKX 平稳趋势极值系统 V7</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -15,7 +15,6 @@
     .header { text-align: center; margin-bottom: 15px; }
     .header h1 { font-size: 22px; color: var(--accent-blue); text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
 
-    /* 倒计时面板 */
     .timer-panel { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center; display: none;}
     .timer-panel.active { display: block; }
     .timer-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; font-weight: bold; }
@@ -23,15 +22,12 @@
     .timer-label { color: var(--text-sub); }
     .timer-value { color: #ffb300; font-family: monospace; font-size: 16px; }
 
-    /* 总控按钮 */
     .master-btn { display: block; width: 100%; padding: 18px; background: linear-gradient(90deg, #00e676, #00b0ff); color: #000; font-size: 18px; font-weight: bold; border: none; border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);}
     .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
     .master-btn:active { transform: scale(0.98); }
 
-    /* 状态与卡片 */
     .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: #ffb300; }
     
-    /* 标题栏与折叠按钮 */
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-left: 5px; border-left: 4px solid var(--accent-blue); }
     .section-title { font-size: 15px; color: #fff; font-weight: bold; }
     .toggle-btn { background: #2d3748; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s; }
@@ -51,7 +47,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 全自动极值系统 V6</h1>
+    <h1>⚡ 平稳趋势极值系统 V7</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -69,9 +65,9 @@
 
 <div class="status-box" id="statusMain">等待启动...</div>
 
-<!-- 4H 模块 (带折叠) -->
+<!-- 4H 模块 -->
 <div class="section-header">
-    <div class="section-title">4H 大趋势监控 (仅收盘更新)</div>
+    <div class="section-title">4H 平稳趋势监控 (严控大阴大阳)</div>
     <button class="toggle-btn" id="toggleBtn4h" onclick="toggle4hTable()">收起</button>
 </div>
 <div class="table-container" id="container4h">
@@ -93,11 +89,9 @@
 </div>
 
 <script>
-// ================= 配置区 =================
 const OKX_URL = "https://www.okx.com/api/v5/market/candles";
 const BINANCE_URL = "https://data-api.binance.vision/api/v3/klines";
 
-// 50 个固定币种
 const FIXED_COINS = [
     "ANT", "BTC", "ETH", "OKB", "SOL", "DOGE", "XRP", "BCH", "DOOD", "ZEC", "SNDK", 
     "XAU", "NVDA", "IRYS", "MMT", "PIEVERSE", "SOXL", "AKE", "PIPPIN", "SPCX", "SKHYNIX", 
@@ -111,7 +105,6 @@ let isScanning = false;
 let timer4h, timer5m, uiTimer;
 let cachedCoins = []; 
 
-// 切换 4H 表格展开/收起
 function toggle4hTable() {
     const container = document.getElementById('container4h');
     const btn = document.getElementById('toggleBtn4h');
@@ -124,30 +117,30 @@ function toggle4hTable() {
     }
 }
 
-// ================= 数据抓取 =================
-// 【极度严苛】：强制只提取已收盘的数据 (OKX: confirm === '1')
+// 抓取 K 线（包含 开高低收）
 async function fetchClosedKlines(coin, interval) {
     const limit = 50;
-    // 1. 尝试 OKX
     try {
         const okxSym = `${coin}-USDT-SWAP`;
         const okxInt = interval === "4h" ? "4H" : "5m";
         const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=${okxInt}&limit=${limit}`);
         const json = await res.json();
         if (json.code === "0" && json.data.length > 0) {
-            // 严格过滤：只保留 confirm 为 '1' 的已收盘 K 线
             const closedData = json.data.filter(d => d[8] === '1').reverse();
-            return closedData.map(d => ({ close: parseFloat(d[4]) }));
+            return closedData.map(d => ({
+                open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4])
+            }));
         }
     } catch(e) {}
 
-    // 2. 降级到币安 (币安默认返回正序，剔除最后一根未收盘即可)
     try {
         const binSym = `${coin}USDT`;
         const res = await fetch(`${BINANCE_URL}?symbol=${binSym}&interval=${interval}&limit=${limit}`);
         const json = await res.json();
         if (Array.isArray(json) && json.length > 0) {
-            return json.slice(0, -1).map(d => ({ close: parseFloat(d[4]) }));
+            return json.slice(0, -1).map(d => ({
+                open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4])
+            }));
         }
     } catch(e) {}
     return [];
@@ -171,15 +164,14 @@ function calcRSI(klines, period = 14) {
     return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
 }
 
-// ================= 扫描逻辑 =================
-
+// ================= 扫描 4H (平稳趋势核心逻辑) =================
 async function scan4H() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody4h');
     
-    status.innerText = "⏳ 4H 整点收盘，正在重新定势...";
+    status.innerText = "⏳ 4H 整点收盘，正在寻找平稳趋势...";
     tbody.innerHTML = "";
     cachedCoins = [];
 
@@ -189,38 +181,70 @@ async function scan4H() {
         if (k4h.length < 30) continue;
         
         const ema5 = calcEMA(k4h, 5), ema20 = calcEMA(k4h, 20), rsi = calcRSI(k4h, 14);
-        const lastIdx = k4h.length - 1, close = k4h[lastIdx].close;
-        const e5 = ema5[lastIdx], e20 = ema20[lastIdx], e5Prev = ema5[lastIdx - 1];
+        const lastIdx = k4h.length - 1;
         
+        const c0 = k4h[lastIdx];     // 最新收盘K线
+        const c1 = k4h[lastIdx-1];   // 前1根
+        const c2 = k4h[lastIdx-2];   // 前2根
+        
+        const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
+        const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
+        const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
+
+        // === 严苛的条件筛选 ===
+        
+        // 1. 防接飞刀：最近3根K线中，不能有涨跌幅超过 4% 的大阴大阳
+        const isC0Huge = Math.abs(c0.close - c0.open) / c0.open > 0.04;
+        const isC1Huge = Math.abs(c1.close - c1.open) / c1.open > 0.04;
+        const isC2Huge = Math.abs(c2.close - c2.open) / c2.open > 0.04;
+        const noHugeCandles = !isC0Huge && !isC1Huge && !isC2Huge;
+
+        // 2. 防刚刚拐头：EMA5 和 EMA20 的排列必须已经持续了 3 根K线
+        const longAlign = (e5_0 > e20_0) && (e5_1 > e20_1) && (e5_2 > e20_2);
+        const shortAlign = (e5_0 < e20_0) && (e5_1 < e20_1) && (e5_2 < e20_2);
+
+        // 3. 防过度偏离：价格距离 EMA20 的乖离率不能超过 8%
+        const bias = Math.abs(c0.close - e20_0) / e20_0;
+        const isBiasOk = bias < 0.08;
+
         let trend = null;
-        if ((close > e5) && (close > e20) && (e5 > e20) && (e5 > e5Prev) && (rsi > 50)) trend = "LONG";
-        else if ((close < e5) && (close < e20) && (e5 < e20) && (e5 < e5Prev) && (rsi < 50)) trend = "SHORT";
+
+        if (noHugeCandles && isBiasOk) {
+            // 做多：平稳多头排列 + RSI在 50~75 (避免超买)
+            if (longAlign && c0.close > e5_0 && rsi > 50 && rsi < 75) {
+                trend = "LONG";
+            }
+            // 做空：平稳空头排列 + RSI在 25~50 (避免超卖)
+            else if (shortAlign && c0.close < e5_0 && rsi < 50 && rsi > 25) {
+                trend = "SHORT";
+            }
+        }
 
         if (trend) {
-            cachedCoins.push({ coin, close, trend });
+            cachedCoins.push({ coin, close: c0.close, trend });
             const tr = document.createElement('tr');
-            const tag = trend === "LONG" ? `<span class="tag-long">多头</span>` : `<span class="tag-short">空头</span>`;
-            tr.innerHTML = `<td>${coin}</td><td style="color:#aaa">${formatPrice(close)}</td><td>${tag}</td>`;
+            const tag = trend === "LONG" ? `<span class="tag-long">平稳多头</span>` : `<span class="tag-short">平稳空头</span>`;
+            tr.innerHTML = `<td>${coin}</td><td style="color:#aaa">${formatPrice(c0.close)}</td><td>${tag}</td>`;
             tbody.appendChild(tr);
         }
         await new Promise(r => setTimeout(r, 120)); 
     }
     
-    status.innerText = `✅ 4H 定势完成，锁定 ${cachedCoins.length} 个趋势币种。`;
+    status.innerText = `✅ 4H 平稳定势完成，仅 ${cachedCoins.length} 个币符合条件。`;
     isScanning = false;
 }
 
+// ================= 扫描 5M (不变) =================
 async function scan5M() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody5m');
     
-    // 【需求实现】：每次扫描开始时，清空上一轮的所有结果
     tbody.innerHTML = "";
 
     if (cachedCoins.length === 0) {
-        status.innerText = "ℹ️ 5M 巡检跳过：当前没有符合 4H 大趋势的币种。";
+        status.innerText = "ℹ️ 5M 巡检跳过：当前没有符合 4H 平稳趋势的币种。";
         isScanning = false;
         return;
     }
@@ -232,12 +256,9 @@ async function scan5M() {
         const item = cachedCoins[i];
         const k5m = await fetchClosedKlines(item.coin, "5m");
         
-        // 需要 1根当前 + 30根历史 = 至少 31 根
         if (k5m.length < 31) continue;
         
-        // 因为已经在 fetchClosedKlines 里过滤了 confirm == '1'
         const latestClosed = k5m[k5m.length - 1];
-        // 截取 latestClosed 之前的 30 根
         const prev30 = k5m.slice(-31, -1); 
         
         const maxPrev30 = Math.max(...prev30.map(k => k.close));
@@ -246,11 +267,12 @@ async function scan5M() {
         let signalType = null;
         let breakPrice = 0;
 
-        // 严格判定：最新收盘价必须是 >= 前30根最高，或者 <= 前30根最低
+        // 做空：最新收盘价 >= 前30根最高收盘价
         if (item.trend === "SHORT" && latestClosed.close >= maxPrev30) {
             signalType = "SHORT";
             breakPrice = maxPrev30;
         }
+        // 做多：最新收盘价 <= 前30根最低收盘价
         else if (item.trend === "LONG" && latestClosed.close <= minPrev30) {
             signalType = "LONG";
             breakPrice = minPrev30;
@@ -278,10 +300,10 @@ async function scan5M() {
     if (entryCount > 0) {
         let isBlink = false;
         let blinkTimer = setInterval(() => {
-            document.title = isBlink ? "🚨 发现极值突破！" : "⚡ 自动巡航运行中";
+            document.title = isBlink ? "🚨 发现极值突破！" : "⚡ 平稳趋势巡航中";
             isBlink = !isBlink;
         }, 1000);
-        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 全自动极值系统 V6"; }, 10000); 
+        setTimeout(() => { clearInterval(blinkTimer); document.title = "⚡ 平稳趋势极值系统 V7"; }, 10000); 
     }
     isScanning = false;
 }
