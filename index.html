@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V21 (进度条版)</title>
+<title>OKX 极值系统 V22 (新高不新低)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -32,12 +32,10 @@
     .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
     .master-btn:active { transform: scale(0.98); }
 
-    /* 进度条与状态框 */
     .status-container { background: rgba(255, 179, 0, 0.05); border: 1px solid rgba(255, 179, 0, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px; }
     .status-box { text-align: center; font-size: 13px; font-weight: 500; color: var(--accent-gold); margin-bottom: 8px; display: flex; justify-content: space-between; }
     .status-text { text-align: left; }
     .status-percent { font-weight: bold; color: #fff; }
-    
     .progress-bar { width: 100%; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; }
     .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width 0.2s ease; }
     
@@ -58,14 +56,13 @@
 
     .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
     .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
-    
     .score-badge { background: linear-gradient(90deg, #ffb300, #ff8f00); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V21 (完美发散)</h1>
+    <h1>⚡ 极值系统 V22 (新高不新低)</h1>
 </div>
 
 <div class="sentiment-panel" id="sentimentPanel">
@@ -82,7 +79,6 @@
     <div class="timer-row"><span class="timer-label">15m 进场倒计时</span><span class="timer-value" id="countdown15m">--:--</span></div>
 </div>
 
-<!-- 状态与进度条 -->
 <div class="status-container" id="statusContainer">
     <div class="status-box">
         <span class="status-text" id="statusText">等待启动...</span>
@@ -108,10 +104,10 @@
         </table>
     </div>
 
-    <div class="section-header"><div class="section-title">1D 趋势下的 15m 进场</div></div>
+    <div class="section-header"><div class="section-title">1D 趋势下的 15m 进场 (新高多/新低空)</div></div>
     <div class="table-container">
         <table>
-            <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>收盘</th></tr></thead>
+            <thead><tr><th>币种</th><th>信号</th><th>突破位</th><th>收盘</th></tr></thead>
             <tbody id="tbody15m_1d"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
         </table>
     </div>
@@ -132,10 +128,10 @@
         </table>
     </div>
 
-    <div class="section-header"><div class="section-title">4H 趋势下的 15m 进场</div></div>
+    <div class="section-header"><div class="section-title">4H 趋势下的 15m 进场 (新高多/新低空)</div></div>
     <div class="table-container">
         <table>
-            <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>收盘</th></tr></thead>
+            <thead><tr><th>币种</th><th>信号</th><th>突破位</th><th>收盘</th></tr></thead>
             <tbody id="tbody15m_4h"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
         </table>
     </div>
@@ -173,7 +169,6 @@ function toggleTable(containerId, btnId) {
     }
 }
 
-// 更新进度条 UI
 function updateProgress(current, total, text) {
     const percent = Math.round((current / total) * 100);
     document.getElementById('statusText').innerText = text;
@@ -181,7 +176,6 @@ function updateProgress(current, total, text) {
     document.getElementById('progressFill').style.width = `${percent}%`;
 }
 
-// 重置进度条
 function resetProgress(text) {
     document.getElementById('statusText').innerText = text;
     document.getElementById('statusPercent').innerText = `0%`;
@@ -331,33 +325,39 @@ async function run15mScan(pool, tbodyId, prefix) {
         if (data15m.closed.length >= 21 && data15m.current) {
             const latestClosed = data15m.closed[data15m.closed.length - 1];
             const prev20 = data15m.closed.slice(-21, -1); 
-            const maxHigh20 = Math.max(...prev20.map(k => k.high));
-            const minLow20 = Math.min(...prev20.map(k => k.low));
+            
+            const recentHigh = Math.max(...prev20.map(k => k.high));
+            const recentLow = Math.min(...prev20.map(k => k.low));
             const realTimePrice = data15m.current.close;
             
             let signalType = null, keyPrice = 0;
-            const tolerance = 0.0015;
 
-            if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
-                const bearishK = prev20.filter(k => k.close < k.open);
-                let targetLow = bearishK.length > 0 ? Math.min(...bearishK.map(k => k.low)) : minLow20;
-                if (latestClosed.low <= targetLow * (1 + tolerance)) {
-                    signalType = "LONG"; keyPrice = targetLow;
-                    if (realTimePrice < targetLow * 0.985) signalType = null; 
+            // === 做多逻辑：新高不新低 ===
+            if (item.trend === "LONG") {
+                // 最高价创了前20根的新高，且最低价没有跌破前20根的最低价
+                if (latestClosed.high > recentHigh && latestClosed.low > recentLow) {
+                    // 防追高拦截：实时现价不能偏离突破位超过 1.5%
+                    if (realTimePrice <= recentHigh * 1.015) {
+                        signalType = "LONG";
+                        keyPrice = recentHigh;
+                    }
                 }
             }
-            else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
-                const bullishK = prev20.filter(k => k.close > k.open);
-                let targetHigh = bullishK.length > 0 ? Math.max(...bullishK.map(k => k.high)) : maxHigh20;
-                if (latestClosed.high >= targetHigh * (1 - tolerance)) {
-                    signalType = "SHORT"; keyPrice = targetHigh;
-                    if (realTimePrice > targetHigh * 1.015) signalType = null;
+            // === 做空逻辑：新低不新高 ===
+            else if (item.trend === "SHORT") {
+                // 最低价创了前20根的新低，且最高价没有突破前20根的最高价
+                if (latestClosed.low < recentLow && latestClosed.high < recentHigh) {
+                    // 防追空拦截：实时现价不能偏离跌破位超过 1.5%
+                    if (realTimePrice >= recentLow * 0.985) {
+                        signalType = "SHORT";
+                        keyPrice = recentLow;
+                    }
                 }
             }
 
             if (signalType) {
                 const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
-                const tagText = signalType === "LONG" ? "踩底多" : "探顶空";
+                const tagText = signalType === "LONG" ? "新高多" : "新低空";
                 tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(keyPrice)}</td><td style="color:#fff">${formatPrice(latestClosed.close)}</td></tr>`;
                 count++;
             }
@@ -371,9 +371,7 @@ async function scan15M() {
     if (isScanning) return;
     isScanning = true;
     
-    // 运行 1D 轨
     const count1d = await run15mScan(cachedCoins1D, 'tbody15m_1d', '1D');
-    // 运行 4H 轨
     const count4h = await run15mScan(cachedCoins4H, 'tbody15m_4h', '4H');
 
     resetProgress(`✅ 巡检完毕。1D轨捕获 ${count1d} 个，4H轨捕获 ${count4h} 个。`);
