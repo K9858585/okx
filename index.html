@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V20 (完美发散排名)</title>
+<title>OKX 极值系统 V21 (进度条版)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -32,7 +32,14 @@
     .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
     .master-btn:active { transform: scale(0.98); }
 
-    .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: var(--accent-gold); }
+    /* 进度条与状态框 */
+    .status-container { background: rgba(255, 179, 0, 0.05); border: 1px solid rgba(255, 179, 0, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px; }
+    .status-box { text-align: center; font-size: 13px; font-weight: 500; color: var(--accent-gold); margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .status-text { text-align: left; }
+    .status-percent { font-weight: bold; color: #fff; }
+    
+    .progress-bar { width: 100%; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width 0.2s ease; }
     
     .strategy-block { border: 2px solid #2d3748; border-radius: 14px; padding: 12px; margin-bottom: 25px; background: #0d1219; }
     .block-title { font-size: 16px; font-weight: bold; color: var(--accent-blue); margin-bottom: 12px; text-align: center; border-bottom: 1px dashed #2d3748; padding-bottom: 8px;}
@@ -53,14 +60,12 @@
     .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
     
     .score-badge { background: linear-gradient(90deg, #ffb300, #ff8f00); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-    .tag-news-bull { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(0, 230, 118, 0.2); margin-left: 3px;}
-    .tag-news-bear { background: rgba(255, 82, 82, 0.1); color: var(--accent-red); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(255, 82, 82, 0.2); margin-left: 3px;}
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V20 (完美发散)</h1>
+    <h1>⚡ 极值系统 V21 (完美发散)</h1>
 </div>
 
 <div class="sentiment-panel" id="sentimentPanel">
@@ -77,7 +82,16 @@
     <div class="timer-row"><span class="timer-label">15m 进场倒计时</span><span class="timer-value" id="countdown15m">--:--</span></div>
 </div>
 
-<div class="status-box" id="statusMain">等待启动...</div>
+<!-- 状态与进度条 -->
+<div class="status-container" id="statusContainer">
+    <div class="status-box">
+        <span class="status-text" id="statusText">等待启动...</span>
+        <span class="status-percent" id="statusPercent">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+</div>
 
 <!-- ================= 模块一：1D 独立策略 ================= -->
 <div class="strategy-block">
@@ -159,6 +173,21 @@ function toggleTable(containerId, btnId) {
     }
 }
 
+// 更新进度条 UI
+function updateProgress(current, total, text) {
+    const percent = Math.round((current / total) * 100);
+    document.getElementById('statusText').innerText = text;
+    document.getElementById('statusPercent').innerText = `${percent}%`;
+    document.getElementById('progressFill').style.width = `${percent}%`;
+}
+
+// 重置进度条
+function resetProgress(text) {
+    document.getElementById('statusText').innerText = text;
+    document.getElementById('statusPercent').innerText = `0%`;
+    document.getElementById('progressFill').style.width = `0%`;
+}
+
 async function fetchMarketSentiment() {
     try {
         const fgRes = await fetch(`${NEWS_API}/market/fear-greed`);
@@ -200,8 +229,6 @@ function calcEMA(klines, period) {
     return ema;
 }
 
-// ================= 核心打分系统：判断完美发散 =================
-// 返回 { trend, score, refPrice } 或 null
 function analyzeTrendPattern(k, ema5, ema20) {
     const lastIdx = k.length - 1;
     const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
@@ -209,11 +236,8 @@ function analyzeTrendPattern(k, ema5, ema20) {
     const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
     const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
 
-    // 1. 剔除暴涨暴跌（大阴大阳）
     if (Math.abs(c0.close - c0.open)/c0.open > 0.08 || Math.abs(c1.close - c1.open)/c1.open > 0.08) return null;
 
-    // 2. 无拐头检查（核心一票否决）
-    // 做多：EMA5 连续向上，EMA20 向上。做空反之
     const isE5Up = e5_0 > e5_1 && e5_1 > e5_2;
     const isE5Down = e5_0 < e5_1 && e5_1 < e5_2;
     const isE20Up = e20_0 > e20_1;
@@ -221,198 +245,141 @@ function analyzeTrendPattern(k, ema5, ema20) {
 
     let trend = null;
 
-    // === 做多完美发散 ===
     if (e5_0 > e20_0 && isE5Up && isE20Up) {
-        // 必须有下影线测试 EMA5，且收盘价站上 EMA5（不容忍实体跌破）
-        // 容差允许最低价稍微破一点点 EMA5 (1.5%以内)
-        if (c0.low <= e5_0 * 1.015 && c0.close > e5_0 * 0.995) {
-            trend = "LONG";
-        }
+        if (c0.low <= e5_0 * 1.015 && c0.close > e5_0 * 0.995) trend = "LONG";
     } 
-    // === 做空完美发散 ===
     else if (e5_0 < e20_0 && isE5Down && isE20Down) {
-        // 必须有上影线测试 EMA5，且收盘价压在 EMA5 之下
-        if (c0.high >= e5_0 * 0.985 && c0.close < e5_0 * 1.005) {
-            trend = "SHORT";
-        }
+        if (c0.high >= e5_0 * 0.985 && c0.close < e5_0 * 1.005) trend = "SHORT";
     }
 
     if (!trend) return null;
 
-    // 3. 打分机制 (满分 100)
     let score = 0;
-
-    // A. 回踩精准度 (40分) - 影线距离 EMA5 越近越好
     const distRatio = trend === "LONG" ? Math.abs(c0.low - e5_0) / e5_0 : Math.abs(c0.high - e5_0) / e5_0;
-    score += Math.max(0, 40 - (distRatio * 1000)); // 距离 1% 扣 10分
-
-    // B. 发散强度 (30分) - EMA5 和 EMA20 的差值
+    score += Math.max(0, 40 - (distRatio * 1000)); 
     const divergence = Math.abs(e5_0 - e20_0) / e20_0;
-    score += Math.min(30, divergence * 500); // 发散度 6% 拿满分
-
-    // C. 斜率强度 (30分) - EMA5 的变化率
+    score += Math.min(30, divergence * 500); 
     const slope = Math.abs(e5_0 - e5_1) / e5_1;
-    score += Math.min(30, slope * 1000); // 斜率 3% 拿满分
-
-    // 限制最高100分
+    score += Math.min(30, slope * 1000); 
     score = Math.min(100, Math.round(score));
 
     return { trend, score, refPrice: e5_0 };
 }
 
-// ================= 扫描 1D =================
 async function scan1D() {
     if (isScanning) return;
     isScanning = true;
-    const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody1d');
-    
-    status.innerText = "⏳ 1D 整点收盘，正在计算完美发散分数...";
     tbody.innerHTML = ""; cachedCoins1D = [];
 
     for (let i = 0; i < FIXED_COINS.length; i++) {
-        const coin = FIXED_COINS[i];
-        const data = await fetchKlinesData(coin, "1d");
-        if (data.closed.length < 30) continue;
-        
-        const k = data.closed;
-        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20);
-        
-        const result = analyzeTrendPattern(k, ema5, ema20);
-        if (result) {
-            cachedCoins1D.push({ coin, trend: result.trend, score: result.score, refPrice: result.refPrice });
+        updateProgress(i, FIXED_COINS.length, `[1D定势] 正在分析: ${FIXED_COINS[i]}`);
+        const data = await fetchKlinesData(FIXED_COINS[i], "1d");
+        if (data.closed.length >= 30) {
+            const k = data.closed;
+            const result = analyzeTrendPattern(k, calcEMA(k, 5), calcEMA(k, 20));
+            if (result) cachedCoins1D.push({ coin: FIXED_COINS[i], trend: result.trend, score: result.score, refPrice: result.refPrice });
         }
-        await new Promise(r => setTimeout(r, 100)); 
+        await new Promise(r => setTimeout(r, 80)); 
     }
 
-    // 根据分数从高到低排序
+    updateProgress(FIXED_COINS.length, FIXED_COINS.length, `[1D定势] 扫描完成`);
     cachedCoins1D.sort((a, b) => b.score - a.score);
-
     for (let item of cachedCoins1D) {
         const tag = item.trend === "LONG" ? `<span class="tag-long">多头</span>` : `<span class="tag-short">空头</span>`;
-        tbody.innerHTML += `
-            <tr>
-                <td>${item.coin}</td>
-                <td><span class="score-badge">${item.score}分</span></td>
-                <td style="color:#00e5ff">${formatPrice(item.refPrice)}</td>
-                <td>${tag}</td>
-            </tr>
-        `;
+        tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="score-badge">${item.score}分</span></td><td style="color:#00e5ff">${formatPrice(item.refPrice)}</td><td>${tag}</td></tr>`;
     }
-    
-    status.innerText = `✅ 1D 扫描完成，按完美度锁定 ${cachedCoins1D.length} 个币。`;
     isScanning = false;
 }
 
-// ================= 扫描 4H =================
 async function scan4H() {
     if (isScanning) return;
     isScanning = true;
-    const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody4h');
-    
-    status.innerText = "⏳ 4H 整点收盘，正在计算完美发散分数...";
     tbody.innerHTML = ""; cachedCoins4H = [];
 
     for (let i = 0; i < FIXED_COINS.length; i++) {
-        const coin = FIXED_COINS[i];
-        const data = await fetchKlinesData(coin, "4h");
-        if (data.closed.length < 30) continue;
-        
-        const k = data.closed;
-        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20);
-        
-        const result = analyzeTrendPattern(k, ema5, ema20);
-        if (result) {
-            cachedCoins4H.push({ coin, trend: result.trend, score: result.score, refPrice: result.refPrice });
+        updateProgress(i, FIXED_COINS.length, `[4H定势] 正在分析: ${FIXED_COINS[i]}`);
+        const data = await fetchKlinesData(FIXED_COINS[i], "4h");
+        if (data.closed.length >= 30) {
+            const k = data.closed;
+            const result = analyzeTrendPattern(k, calcEMA(k, 5), calcEMA(k, 20));
+            if (result) cachedCoins4H.push({ coin: FIXED_COINS[i], trend: result.trend, score: result.score, refPrice: result.refPrice });
         }
-        await new Promise(r => setTimeout(r, 100)); 
+        await new Promise(r => setTimeout(r, 80)); 
     }
 
-    // 根据分数从高到低排序
+    updateProgress(FIXED_COINS.length, FIXED_COINS.length, `[4H定势] 扫描完成`);
     cachedCoins4H.sort((a, b) => b.score - a.score);
-
     for (let item of cachedCoins4H) {
         const tag = item.trend === "LONG" ? `<span class="tag-long">多头</span>` : `<span class="tag-short">空头</span>`;
-        tbody.innerHTML += `
-            <tr>
-                <td>${item.coin}</td>
-                <td><span class="score-badge">${item.score}分</span></td>
-                <td style="color:#00e5ff">${formatPrice(item.refPrice)}</td>
-                <td>${tag}</td>
-            </tr>
-        `;
+        tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="score-badge">${item.score}分</span></td><td style="color:#00e5ff">${formatPrice(item.refPrice)}</td><td>${tag}</td></tr>`;
     }
-    
-    status.innerText = `✅ 4H 扫描完成，按完美度锁定 ${cachedCoins4H.length} 个币。`;
     isScanning = false;
 }
 
-// ================= 15M 进场辅助 =================
-async function run15mScan(pool, tbodyId) {
+async function run15mScan(pool, tbodyId, prefix) {
     const tbody = document.getElementById(tbodyId);
     tbody.innerHTML = "";
     let count = 0;
 
     for (let i = 0; i < pool.length; i++) {
+        updateProgress(i, pool.length, `[${prefix}进场] 正在寻找: ${pool[i].coin}`);
         const item = pool[i];
         const data15m = await fetchKlinesData(item.coin, "15m");
-        if (data15m.closed.length < 21 || !data15m.current) continue;
         
-        const latestClosed = data15m.closed[data15m.closed.length - 1];
-        const prev20 = data15m.closed.slice(-21, -1); 
-        const maxHigh20 = Math.max(...prev20.map(k => k.high));
-        const minLow20 = Math.min(...prev20.map(k => k.low));
-        const realTimePrice = data15m.current.close;
-        
-        let signalType = null, keyPrice = 0;
-        const tolerance = 0.0015;
+        if (data15m.closed.length >= 21 && data15m.current) {
+            const latestClosed = data15m.closed[data15m.closed.length - 1];
+            const prev20 = data15m.closed.slice(-21, -1); 
+            const maxHigh20 = Math.max(...prev20.map(k => k.high));
+            const minLow20 = Math.min(...prev20.map(k => k.low));
+            const realTimePrice = data15m.current.close;
+            
+            let signalType = null, keyPrice = 0;
+            const tolerance = 0.0015;
 
-        if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
-            const bearishK = prev20.filter(k => k.close < k.open);
-            let targetLow = bearishK.length > 0 ? Math.min(...bearishK.map(k => k.low)) : minLow20;
+            if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
+                const bearishK = prev20.filter(k => k.close < k.open);
+                let targetLow = bearishK.length > 0 ? Math.min(...bearishK.map(k => k.low)) : minLow20;
+                if (latestClosed.low <= targetLow * (1 + tolerance)) {
+                    signalType = "LONG"; keyPrice = targetLow;
+                    if (realTimePrice < targetLow * 0.985) signalType = null; 
+                }
+            }
+            else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
+                const bullishK = prev20.filter(k => k.close > k.open);
+                let targetHigh = bullishK.length > 0 ? Math.max(...bullishK.map(k => k.high)) : maxHigh20;
+                if (latestClosed.high >= targetHigh * (1 - tolerance)) {
+                    signalType = "SHORT"; keyPrice = targetHigh;
+                    if (realTimePrice > targetHigh * 1.015) signalType = null;
+                }
+            }
 
-            if (latestClosed.low <= targetLow * (1 + tolerance)) {
-                signalType = "LONG"; keyPrice = targetLow;
-                if (realTimePrice < targetLow * 0.985) signalType = null; 
+            if (signalType) {
+                const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
+                const tagText = signalType === "LONG" ? "踩底多" : "探顶空";
+                tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(keyPrice)}</td><td style="color:#fff">${formatPrice(latestClosed.close)}</td></tr>`;
+                count++;
             }
         }
-        else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
-            const bullishK = prev20.filter(k => k.close > k.open);
-            let targetHigh = bullishK.length > 0 ? Math.max(...bullishK.map(k => k.high)) : maxHigh20;
-
-            if (latestClosed.high >= targetHigh * (1 - tolerance)) {
-                signalType = "SHORT"; keyPrice = targetHigh;
-                if (realTimePrice > targetHigh * 1.015) signalType = null;
-            }
-        }
-
-        if (signalType) {
-            const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
-            const tagText = signalType === "LONG" ? "踩底多" : "探顶空";
-            tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(keyPrice)}</td><td style="color:#fff">${formatPrice(latestClosed.close)}</td></tr>`;
-            count++;
-        }
-        await new Promise(r => setTimeout(r, 100)); 
+        await new Promise(r => setTimeout(r, 80)); 
     }
     return count;
 }
 
-// ================= 扫描 15M =================
 async function scan15M() {
     if (isScanning) return;
     isScanning = true;
-    const status = document.getElementById('statusMain');
-    status.innerText = "⏳ 15m 巡检中，正在双轨寻找极致进场位...";
+    
+    // 运行 1D 轨
+    const count1d = await run15mScan(cachedCoins1D, 'tbody15m_1d', '1D');
+    // 运行 4H 轨
+    const count4h = await run15mScan(cachedCoins4H, 'tbody15m_4h', '4H');
 
-    const count1d = await run15mScan(cachedCoins1D, 'tbody15m_1d');
-    const count4h = await run15mScan(cachedCoins4H, 'tbody15m_4h');
-
-    status.innerText = `✅ 巡检完毕。1D轨捕获 ${count1d} 个，4H轨捕获 ${count4h} 个。`;
+    resetProgress(`✅ 巡检完毕。1D轨捕获 ${count1d} 个，4H轨捕获 ${count4h} 个。`);
     isScanning = false;
 }
 
-// ================= 定时器 =================
 function startCycle1D() {
     const intervalMs = 24 * 60 * 60 * 1000;
     const now = Date.now();
@@ -453,17 +420,16 @@ function updateCountdowns() {
 function toggleAuto() {
     const btn = document.getElementById('masterBtn');
     const panel = document.getElementById('timerPanel');
-    const status = document.getElementById('statusMain');
 
     if (isRunning) {
         isRunning = false;
         clearTimeout(timer1d); clearTimeout(timer4h); clearTimeout(timer15m); clearInterval(uiTimer);
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
-        panel.classList.remove('active'); status.innerText = "自动巡航已停止。";
+        panel.classList.remove('active'); resetProgress("自动巡航已停止。");
     } else {
         isRunning = true;
         btn.innerText = "停止自动巡航"; btn.classList.add('stop');
-        panel.classList.add('active'); status.innerText = "系统已启动，正在对齐收盘时间...";
+        panel.classList.add('active'); resetProgress("系统已启动，正在对齐收盘时间...");
         fetchMarketSentiment(); 
         updateCountdowns(); uiTimer = setInterval(updateCountdowns, 1000);
         
