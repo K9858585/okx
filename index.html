@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V25 (声音报警)</title>
+<title>OKX 极值系统 V28 (大池子严格版)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -62,7 +62,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V25 (声音报警)</h1>
+    <h1>⚡ 极值系统 V28 (精准贴线)</h1>
 </div>
 
 <div class="sentiment-panel" id="sentimentPanel">
@@ -90,7 +90,7 @@
 
 <!-- ================= 模块一：1D 独立策略 ================= -->
 <div class="strategy-block">
-    <div class="block-title">📈 1D 级别 (完美发散排名)</div>
+    <div class="block-title">📈 1D 级别 (完美贴线排名)</div>
     
     <div class="section-header">
         <div class="section-title">1D 均线完美发散池</div>
@@ -116,10 +116,19 @@
 const OKX_URL = "https://www.okx.com/api/v5/market/candles";
 const NEWS_API = "https://cryptocurrency.cv/api";
 
+// 【最新合并池】包含了截图中的所有币种 + 之前的币种
 const FIXED_COINS = [
+    // 截图新增币种
+    "UP", "ZRO", "XPL", "BERA", "CRWV", "AVGO", "NIGHT", "ICP", "META", 
+    "APT", "SAMSUNG", "PENGU", "JUP", "XLM", "ZHIPU", "CRV", "TSM", "MUU", 
+    "TRX", "ONDO", "VVV", "AAOI", "PONS", "ASTER", "SHIB", "OP", "DOT", 
+    "LITE", "NBIS", "SPY", "UVXY", "ZHONGJIU", "MRVL", "TSLA", "SKDD", 
+    "AAVE", "INJ", "DRAM", "BZ", "AAPL", "SQQQ", "TAO", "STRK", "ARB", "AVAX",
+    
+    // 之前的币种（去重后）
     "ANT", "BTC", "ETH", "OKB", "SOL", "DOGE", "XRP", "BCH", "DOOD", "ZEC", "SNDK", 
     "XAU", "NVDA", "IRYS", "MMT", "PIEVERSE", "SOXL", "AKE", "PIPPIN", "SPCX", "SKHYNIX", 
-    "BTW", "MU", "HUMA", "UP", "HYPE", "CL", "PEPE", "XAG", "CAP", "PROS", 
+    "BTW", "MU", "HUMA", "HYPE", "CL", "PEPE", "XAG", "CAP", "PROS", 
     "SENT", "YB", "AMD", "QQQ", "BREV", "RAVE", "INTC", "NESA", "SOXS", 
     "PUMP", "TRUMP", "UNITREE", "NEAR", "SNXX", "PDD", "GOOGL", "KORU", "LIT", "INI", "USELESS"
 ];
@@ -130,34 +139,31 @@ let timer1d, timer15m, uiTimer;
 let cachedCoins1D = [];
 let globalFearGreed = 50; 
 
-// === 音频初始化变量 ===
 let audioCtx = null;
+let ringInterval = null;
 
-// === 播放提示音的函数 ===
-function playAlertSound() {
+function playLongAlert() {
     if (!audioCtx) return;
-    // 如果处于挂起状态（被浏览器暂停），尝试恢复
-    if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (ringInterval) clearInterval(ringInterval);
     
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    // 设置音调和波形
-    oscillator.type = 'sine'; // 正弦波，声音比较清脆
-    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 起始音调 A5
-    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); // 迅速滑向 A6 (更尖锐)
-    
-    // 设置音量包络（渐弱）
-    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + 0.6);
+    let count = 0;
+    const ring = () => {
+        if (count >= 5) { clearInterval(ringInterval); return; }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        count++;
+    };
+    ring();
+    ringInterval = setInterval(ring, 400);
 }
 
 function toggleTable(containerId, btnId) {
@@ -225,6 +231,7 @@ function calcEMA(klines, period) {
     return ema;
 }
 
+// === 【核心修改】：极度严苛的影线贴合测试 ===
 function analyzeTrendPattern(k, ema5, ema20) {
     const lastIdx = k.length - 1;
     const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
@@ -232,27 +239,39 @@ function analyzeTrendPattern(k, ema5, ema20) {
     const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
     const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
 
+    // 剔除超级大阴大阳
     if (Math.abs(c0.close - c0.open)/c0.open > 0.08 || Math.abs(c1.close - c1.open)/c1.open > 0.08) return null;
 
+    // 无拐头要求：最近 3 根均线排列必须一致
     const isE5Up = e5_0 > e5_1 && e5_1 > e5_2;
     const isE5Down = e5_0 < e5_1 && e5_1 < e5_2;
     const isE20Up = e20_0 > e20_1;
     const isE20Down = e20_0 < e20_1;
 
     let trend = null;
+    let shadowDist = 1; 
 
+    // === 做多：下影线测试 EMA5 ===
     if (e5_0 > e20_0 && isE5Up && isE20Up) {
-        if (c0.low <= e5_0 * 1.015 && c0.close > e5_0 * 0.995) trend = "LONG";
+        const nearLine = c0.low <= e5_0 * 1.003 && c0.low >= e5_0 * 0.995;
+        if (c0.close > e5_0 && nearLine) {
+            trend = "LONG";
+            shadowDist = Math.abs(c0.low - e5_0) / e5_0; 
+        }
     } 
+    // === 做空：上影线测试 EMA5 ===
     else if (e5_0 < e20_0 && isE5Down && isE20Down) {
-        if (c0.high >= e5_0 * 0.985 && c0.close < e5_0 * 1.005) trend = "SHORT";
+        const nearLine = c0.high >= e5_0 * 0.997 && c0.high <= e5_0 * 1.005;
+        if (c0.close < e5_0 && nearLine) {
+            trend = "SHORT";
+            shadowDist = Math.abs(c0.high - e5_0) / e5_0;
+        }
     }
 
     if (!trend) return null;
 
     let score = 0;
-    const distRatio = trend === "LONG" ? Math.abs(c0.low - e5_0) / e5_0 : Math.abs(c0.high - e5_0) / e5_0;
-    score += Math.max(0, 40 - (distRatio * 1000)); 
+    score += Math.max(0, 40 - (shadowDist * 13000)); 
     const divergence = Math.abs(e5_0 - e20_0) / e20_0;
     score += Math.min(30, divergence * 500); 
     const slope = Math.abs(e5_0 - e5_1) / e5_1;
@@ -316,7 +335,7 @@ async function run15mScan() {
 
             if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
                 if (latestClosed.low <= recentLow10 * (1 + tolerance)) {
-                    if (realTimePrice >= recentLow10 * 0.985) {
+                    if (realTimePrice >= recentLow10 * 0.985 && realTimePrice >= latestClosed.close * 0.995) {
                         signalType = "LONG";
                         keyPrice = recentLow10;
                     }
@@ -324,7 +343,7 @@ async function run15mScan() {
             }
             else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
                 if (latestClosed.high >= recentHigh10 * (1 - tolerance)) {
-                    if (realTimePrice <= recentHigh10 * 1.015) {
+                    if (realTimePrice <= recentHigh10 * 1.015 && realTimePrice <= latestClosed.close * 1.005) {
                         signalType = "SHORT";
                         keyPrice = recentHigh10;
                     }
@@ -349,8 +368,8 @@ async function scan15M() {
     const count = await run15mScan();
     
     if (count > 0) {
-        playAlertSound(); // 触发声音报警
-        resetProgress(`🚨 发现 ${count} 个信号！(已发声提醒)`);
+        playLongAlert();
+        resetProgress(`🚨 发现 ${count} 个高胜率信号！(持续响铃中)`);
     } else {
         resetProgress(`✅ 巡检完毕，暂无符合条件的新信号。`);
     }
@@ -392,17 +411,16 @@ function toggleAuto() {
     if (isRunning) {
         isRunning = false;
         clearTimeout(timer1d); clearTimeout(timer15m); clearInterval(uiTimer);
+        if (ringInterval) clearInterval(ringInterval);
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
         panel.classList.remove('active'); resetProgress("自动巡航已停止。");
     } else {
-        // 【关键解锁】用户点击按钮时，初始化并解锁 AudioContext
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
         if (audioCtx.state === 'suspended') {
             audioCtx.resume();
         }
-        playAlertSound(); // 启动时响一声，证明声音可用
 
         isRunning = true;
         btn.innerText = "停止自动巡航"; btn.classList.add('stop');
