@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V17 (港股时间结算)</title>
+<title>OKX 极值系统 V19 (双轨独立版)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -16,51 +16,55 @@
     .header { text-align: center; margin-bottom: 15px; }
     .header h1 { font-size: 22px; color: var(--accent-blue); text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
 
-    .sentiment-panel { background: linear-gradient(145deg, #2a1b1b, #1a1111); border: 1px solid #553333; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
-    .sentiment-title { font-size: 14px; color: var(--accent-gold); font-weight: bold; margin-bottom: 8px; }
-    .sentiment-value { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
-    .sentiment-desc { font-size: 12px; color: var(--text-sub); margin-top: 5px; }
+    .sentiment-panel { background: linear-gradient(145deg, #2a1b1b, #1a1111); border: 1px solid #553333; border-radius: 12px; padding: 12px; margin-bottom: 15px; text-align: center; }
+    .sentiment-title { font-size: 13px; color: var(--accent-gold); font-weight: bold; margin-bottom: 5px; }
+    .sentiment-value { font-size: 24px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+    .sentiment-desc { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
 
-    .timer-panel { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center; display: none;}
+    .timer-panel { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; text-align: center; display: none;}
     .timer-panel.active { display: block; }
-    .timer-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; font-weight: bold; }
+    .timer-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
     .timer-row:last-child { margin-bottom: 0; }
     .timer-label { color: var(--text-sub); }
-    .timer-value { color: var(--accent-gold); font-family: monospace; font-size: 16px; }
+    .timer-value { color: var(--accent-gold); font-family: monospace; font-size: 14px; }
 
-    .master-btn { display: block; width: 100%; padding: 18px; background: linear-gradient(90deg, #00e676, #00b0ff); color: #000; font-size: 18px; font-weight: bold; border: none; border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);}
+    .master-btn { display: block; width: 100%; padding: 16px; background: linear-gradient(90deg, #00e676, #00b0ff); color: #000; font-size: 17px; font-weight: bold; border: none; border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);}
     .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
     .master-btn:active { transform: scale(0.98); }
 
     .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: var(--accent-gold); }
     
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-left: 5px; border-left: 4px solid var(--accent-blue); }
-    .section-title { font-size: 15px; color: #fff; font-weight: bold; }
+    /* 策略区块分割 */
+    .strategy-block { border: 2px solid #2d3748; border-radius: 14px; padding: 12px; margin-bottom: 25px; background: #0d1219; }
+    .block-title { font-size: 16px; font-weight: bold; color: var(--accent-blue); margin-bottom: 12px; text-align: center; border-bottom: 1px dashed #2d3748; padding-bottom: 8px;}
+    
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-left: 5px; border-left: 4px solid var(--accent-blue); }
+    .section-title { font-size: 14px; color: #fff; font-weight: bold; }
     .toggle-btn { background: #2d3748; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s; }
     .toggle-btn:active { background: #4a5568; }
     
-    .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; }
+    .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 15px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
-    th { background: #1e2532; color: var(--text-sub); padding: 12px 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
+    th { background: #1e2532; color: var(--text-sub); padding: 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
     th:first-child { text-align: left; }
-    td { padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
+    td { padding: 10px; text-align: right; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
     td:first-child { text-align: left; font-weight: bold; color: #fff; }
 
-    .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
-    .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
+    .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
+    .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
     
-    .tag-news-bull { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(0, 230, 118, 0.2); margin-left: 5px;}
-    .tag-news-bear { background: rgba(255, 82, 82, 0.1); color: var(--accent-red); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(255, 82, 82, 0.2); margin-left: 5px;}
+    .tag-news-bull { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(0, 230, 118, 0.2); margin-left: 3px;}
+    .tag-news-bear { background: rgba(255, 82, 82, 0.1); color: var(--accent-red); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(255, 82, 82, 0.2); margin-left: 3px;}
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V17 (港股时间)</h1>
+    <h1>⚡ 极值系统 V19 (独立双轨)</h1>
 </div>
 
 <div class="sentiment-panel" id="sentimentPanel">
-    <div class="sentiment-title">📊 实时市场情绪 (恐慌贪婪指数)</div>
+    <div class="sentiment-title">📊 实时市场情绪</div>
     <div class="sentiment-value" id="fgiValue">--</div>
     <div class="sentiment-desc" id="fgiDesc">正在获取数据...</div>
 </div>
@@ -68,37 +72,59 @@
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
 
 <div class="timer-panel" id="timerPanel">
-    <div class="timer-row">
-        <span class="timer-label">距离下次 1D 扫描 (凌晨0点)</span>
-        <span class="timer-value" id="countdown1d">--:--:--</span>
-    </div>
-    <div class="timer-row">
-        <span class="timer-label">距离下次 15m 扫描</span>
-        <span class="timer-value" id="countdown15m">--:--</span>
-    </div>
+    <div class="timer-row"><span class="timer-label">1D 扫描倒计时</span><span class="timer-value" id="countdown1d">--:--:--</span></div>
+    <div class="timer-row"><span class="timer-label">4H 扫描倒计时</span><span class="timer-value" id="countdown4h">--:--:--</span></div>
+    <div class="timer-row"><span class="timer-label">15m 进场倒计时</span><span class="timer-value" id="countdown15m">--:--</span></div>
 </div>
 
 <div class="status-box" id="statusMain">等待启动...</div>
 
-<div class="section-header">
-    <div class="section-title">1D 平稳趋势监控</div>
-    <button class="toggle-btn" id="toggleBtn4h" onclick="toggle4hTable()">收起</button>
-</div>
-<div class="table-container" id="container4h">
-    <table>
-        <thead><tr><th>币种</th><th>收盘价</th><th>趋势</th></tr></thead>
-        <tbody id="tbody4h"><tr><td colspan="3" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
-    </table>
+<!-- ================= 模块一：1D 独立策略 ================= -->
+<div class="strategy-block">
+    <div class="block-title">📈 1D 级别独立策略</div>
+    
+    <div class="section-header">
+        <div class="section-title">1D 平稳趋势定势</div>
+        <button class="toggle-btn" id="toggleBtn1d" onclick="toggleTable('container1d', 'toggleBtn1d')">收起</button>
+    </div>
+    <div class="table-container" id="container1d">
+        <table>
+            <thead><tr><th>币种</th><th>收盘价</th><th>趋势</th></tr></thead>
+            <tbody id="tbody1d"><tr><td colspan="3" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="section-header"><div class="section-title">1D 趋势下的 15m 进场</div></div>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>收盘</th></tr></thead>
+            <tbody id="tbody15m_1d"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
+        </table>
+    </div>
 </div>
 
-<div class="section-header">
-    <div class="section-title">15m 阴线踩底 / 阳线探顶 (前20根极值)</div>
-</div>
-<div class="table-container">
-    <table>
-        <thead><tr><th>币种</th><th>形态</th><th>情绪</th><th>关键位</th><th>收盘</th></tr></thead>
-        <tbody id="tbody5m"><tr><td colspan="5" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
-    </table>
+<!-- ================= 模块二：4H 独立策略 ================= -->
+<div class="strategy-block">
+    <div class="block-title">📊 4H 级别独立策略</div>
+    
+    <div class="section-header">
+        <div class="section-title">4H 平稳趋势定势</div>
+        <button class="toggle-btn" id="toggleBtn4h" onclick="toggleTable('container4h', 'toggleBtn4h')">收起</button>
+    </div>
+    <div class="table-container" id="container4h">
+        <table>
+            <thead><tr><th>币种</th><th>收盘价</th><th>趋势</th></tr></thead>
+            <tbody id="tbody4h"><tr><td colspan="3" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
+        </table>
+    </div>
+
+    <div class="section-header"><div class="section-title">4H 趋势下的 15m 进场</div></div>
+    <div class="table-container">
+        <table>
+            <thead><tr><th>币种</th><th>形态</th><th>关键位</th><th>收盘</th></tr></thead>
+            <tbody id="tbody15m_4h"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
@@ -115,14 +141,16 @@ const FIXED_COINS = [
 
 let isRunning = false;
 let isScanning = false; 
-let timer1d, timer15m, uiTimer;
-let cachedCoins = []; 
+let timer1d, timer4h, timer15m, uiTimer;
 
+// 两个独立的缓存池
+let cachedCoins1D = [];
+let cachedCoins4H = [];
 let globalFearGreed = 50; 
 
-function toggle4hTable() {
-    const container = document.getElementById('container4h');
-    const btn = document.getElementById('toggleBtn4h');
+function toggleTable(containerId, btnId) {
+    const container = document.getElementById(containerId);
+    const btn = document.getElementById(btnId);
     if (container.style.display === 'none') {
         container.style.display = 'block';
         btn.innerText = '收起';
@@ -144,7 +172,7 @@ async function fetchMarketSentiment() {
         document.getElementById('fgiDesc').innerText = fgJson.classification || "Neutral";
     } catch (e) {
         document.getElementById('fgiValue').innerText = "--";
-        document.getElementById('fgiDesc').innerText = "数据获取失败";
+        document.getElementById('fgiDesc').innerText = "获取失败";
     }
 }
 
@@ -152,8 +180,10 @@ async function fetchKlinesData(coin, interval) {
     const limit = 60;
     try {
         const okxSym = `${coin}-USDT-SWAP`;
-        // 【修改点】：1D 默认即为按香港时间(UTC+8) 0点结算的日线
-        const okxInt = interval === "1d" ? "1D" : "15m";
+        let okxInt = "15m";
+        if (interval === "1d") okxInt = "1D";
+        if (interval === "4h") okxInt = "4H";
+        
         const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=${okxInt}&limit=${limit}`);
         const json = await res.json();
         if (json.code === "0" && json.data.length > 0) {
@@ -187,15 +217,15 @@ function calcRSI(klines, period = 14) {
     return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
 }
 
+// ================= 扫描 1D (独立) =================
 async function scan1D() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
-    const tbody = document.getElementById('tbody4h');
+    const tbody = document.getElementById('tbody1d');
     
-    status.innerText = "⏳ 1D 整点收盘，正在寻找平稳趋势...";
-    tbody.innerHTML = "";
-    cachedCoins = [];
+    status.innerText = "⏳ 1D 整点收盘，正在独立定势...";
+    tbody.innerHTML = ""; cachedCoins1D = [];
 
     for (let i = 0; i < FIXED_COINS.length; i++) {
         const coin = FIXED_COINS[i];
@@ -205,22 +235,15 @@ async function scan1D() {
         const k = data.closed;
         const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20), rsi = calcRSI(k, 14);
         const lastIdx = k.length - 1;
-        
         const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
         const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
         const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
         const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
 
-        const isC0Huge = Math.abs(c0.close - c0.open) / c0.open > 0.08;
-        const isC1Huge = Math.abs(c1.close - c1.open) / c1.open > 0.08;
-        const isC2Huge = Math.abs(c2.close - c2.open) / c2.open > 0.08;
-        const noHugeCandles = !isC0Huge && !isC1Huge && !isC2Huge;
-
+        const noHugeCandles = !(Math.abs(c0.close - c0.open)/c0.open > 0.08) && !(Math.abs(c1.close - c1.open)/c1.open > 0.08) && !(Math.abs(c2.close - c2.open)/c2.open > 0.08);
         const longAlign = (e5_0 > e20_0) && (e5_1 > e20_1) && (e5_2 > e20_2);
         const shortAlign = (e5_0 < e20_0) && (e5_1 < e20_1) && (e5_2 < e20_2);
-
-        const bias = Math.abs(c0.close - e20_0) / e20_0;
-        const isBiasOk = bias < 0.15;
+        const isBiasOk = Math.abs(c0.close - e20_0) / e20_0 < 0.15;
 
         let trend = null;
         if (noHugeCandles && isBiasOk) {
@@ -229,72 +252,90 @@ async function scan1D() {
         }
 
         if (trend) {
-            cachedCoins.push({ coin, close: c0.close, trend });
-            const tr = document.createElement('tr');
-            const tag = trend === "LONG" ? `<span class="tag-long">平稳多头</span>` : `<span class="tag-short">平稳空头</span>`;
-            tr.innerHTML = `<td>${coin}</td><td style="color:#aaa">${formatPrice(c0.close)}</td><td>${tag}</td>`;
-            tbody.appendChild(tr);
+            cachedCoins1D.push({ coin, trend });
+            tbody.innerHTML += `<tr><td>${coin}</td><td style="color:#aaa">${formatPrice(c0.close)}</td><td><span class="${trend==='LONG'?'tag-long':'tag-short'}">${trend==='LONG'?'多头':'空头'}</span></td></tr>`;
         }
         await new Promise(r => setTimeout(r, 120)); 
     }
-    
-    status.innerText = `✅ 1D 平稳定势完成，锁定 ${cachedCoins.length} 个趋势币。`;
+    status.innerText = `✅ 1D 独立定势完成，锁定 ${cachedCoins1D.length} 个币。`;
     isScanning = false;
 }
 
-async function scan15M() {
+// ================= 扫描 4H (独立) =================
+async function scan4H() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
-    const tbody = document.getElementById('tbody5m');
+    const tbody = document.getElementById('tbody4h');
     
-    tbody.innerHTML = "";
+    status.innerText = "⏳ 4H 整点收盘，正在独立定势...";
+    tbody.innerHTML = ""; cachedCoins4H = [];
 
-    if (cachedCoins.length === 0) {
-        status.innerText = "ℹ️ 15m 巡检跳过：当前没有符合条件的币种。";
-        isScanning = false;
-        return;
-    }
-
-    status.innerText = "⏳ 15m 整点收盘，正在寻找前20根极值突破...";
-    let entryCount = 0;
-
-    for (let i = 0; i < cachedCoins.length; i++) {
-        const item = cachedCoins[i];
-        const data15m = await fetchKlinesData(item.coin, "15m");
+    for (let i = 0; i < FIXED_COINS.length; i++) {
+        const coin = FIXED_COINS[i];
+        const data = await fetchKlinesData(coin, "4h");
+        if (data.closed.length < 30) continue;
         
+        const k = data.closed;
+        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20), rsi = calcRSI(k, 14);
+        const lastIdx = k.length - 1;
+        const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
+        const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
+        const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
+        const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
+
+        const noHugeCandles = !(Math.abs(c0.close - c0.open)/c0.open > 0.04) && !(Math.abs(c1.close - c1.open)/c1.open > 0.04) && !(Math.abs(c2.close - c2.open)/c2.open > 0.04);
+        const longAlign = (e5_0 > e20_0) && (e5_1 > e20_1) && (e5_2 > e20_2);
+        const shortAlign = (e5_0 < e20_0) && (e5_1 < e20_1) && (e5_2 < e20_2);
+        const isBiasOk = Math.abs(c0.close - e20_0) / e20_0 < 0.08;
+
+        let trend = null;
+        if (noHugeCandles && isBiasOk) {
+            if (longAlign && c0.close > e5_0 && rsi > 50 && rsi < 75) trend = "LONG";
+            else if (shortAlign && c0.close < e5_0 && rsi < 50 && rsi > 25) trend = "SHORT";
+        }
+
+        if (trend) {
+            cachedCoins4H.push({ coin, trend });
+            tbody.innerHTML += `<tr><td>${coin}</td><td style="color:#aaa">${formatPrice(c0.close)}</td><td><span class="${trend==='LONG'?'tag-long':'tag-short'}">${trend==='LONG'?'多头':'空头'}</span></td></tr>`;
+        }
+        await new Promise(r => setTimeout(r, 120)); 
+    }
+    status.innerText = `✅ 4H 独立定势完成，锁定 ${cachedCoins4H.length} 个币。`;
+    isScanning = false;
+}
+
+// ================= 15M 进场辅助函数 =================
+async function run15mScan(pool, tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = "";
+    let count = 0;
+
+    for (let i = 0; i < pool.length; i++) {
+        const item = pool[i];
+        const data15m = await fetchKlinesData(item.coin, "15m");
         if (data15m.closed.length < 21 || !data15m.current) continue;
         
         const latestClosed = data15m.closed[data15m.closed.length - 1];
         const prev20 = data15m.closed.slice(-21, -1); 
-        
         const maxHigh20 = Math.max(...prev20.map(k => k.high));
         const minLow20 = Math.min(...prev20.map(k => k.low));
-        
         const realTimePrice = data15m.current.close;
         
-        let signalType = null;
-        let keyPrice = 0;
-        let sentimentTag = "";
+        let signalType = null, keyPrice = 0;
+        let sentimentTag = `<span class="tag-news-bull">允许</span>`;
         const tolerance = 0.0015;
 
         if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
             const bearishK = prev20.filter(k => k.close < k.open);
-            let targetLow = minLow20; 
-            if (bearishK.length > 0) targetLow = Math.min(...bearishK.map(k => k.low));
+            let targetLow = bearishK.length > 0 ? Math.min(...bearishK.map(k => k.low)) : minLow20;
 
             if (latestClosed.low <= targetLow * (1 + tolerance)) {
-                const bodyDrop = (latestClosed.open - latestClosed.close) / latestClosed.open;
-                const lowerShadow = latestClosed.close - latestClosed.low;
-                
-                if (!(bodyDrop > 0.01 && lowerShadow < (latestClosed.open - latestClosed.close))) {
+                if (!((latestClosed.open - latestClosed.close)/latestClosed.open > 0.01 && latestClosed.close - latestClosed.low < latestClosed.open - latestClosed.close)) {
                     if (globalFearGreed < 25) {
-                        sentimentTag = `<span class="tag-news-bear">宏观恐慌拦截</span>`;
-                        signalType = null;
+                        sentimentTag = `<span class="tag-news-bear">恐慌拦截</span>`;
                     } else {
-                        signalType = "LONG";
-                        keyPrice = targetLow;
-                        sentimentTag = `<span class="tag-news-bull">情绪允许</span>`;
+                        signalType = "LONG"; keyPrice = targetLow;
                         if (realTimePrice < targetLow * 0.985) signalType = null; 
                     }
                 }
@@ -303,21 +344,14 @@ async function scan15M() {
         
         else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
             const bullishK = prev20.filter(k => k.close > k.open);
-            let targetHigh = maxHigh20; 
-            if (bullishK.length > 0) targetHigh = Math.max(...bullishK.map(k => k.high));
+            let targetHigh = bullishK.length > 0 ? Math.max(...bullishK.map(k => k.high)) : maxHigh20;
 
             if (latestClosed.high >= targetHigh * (1 - tolerance)) {
-                const bodyRise = (latestClosed.close - latestClosed.open) / latestClosed.open;
-                const upperShadow = latestClosed.high - latestClosed.close;
-                
-                if (!(bodyRise > 0.01 && upperShadow < (latestClosed.close - latestClosed.open))) {
+                if (!((latestClosed.close - latestClosed.open)/latestClosed.open > 0.01 && latestClosed.high - latestClosed.close < latestClosed.close - latestClosed.open)) {
                     if (globalFearGreed > 80) {
-                        sentimentTag = `<span class="tag-news-bull">宏观贪婪拦截</span>`;
-                        signalType = null;
+                        sentimentTag = `<span class="tag-news-bear">贪婪拦截</span>`;
                     } else {
-                        signalType = "SHORT";
-                        keyPrice = targetHigh;
-                        sentimentTag = `<span class="tag-news-bear">情绪允许</span>`;
+                        signalType = "SHORT"; keyPrice = targetHigh;
                         if (realTimePrice > targetHigh * 1.015) signalType = null;
                     }
                 }
@@ -325,83 +359,69 @@ async function scan15M() {
         }
 
         if (signalType) {
-            const tr = document.createElement('tr');
             const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
-            const tagText = signalType === "LONG" ? "阴线踩底" : "阳线探顶";
-            
-            tr.innerHTML = `
-                <td>${item.coin}</td>
-                <td><span class="${tagClass}">${tagText}</span></td>
-                <td>${sentimentTag}</td>
-                <td style="color:#00e5ff">${formatPrice(keyPrice)}</td>
-                <td style="color:#fff">${formatPrice(latestClosed.close)}</td>
-            `;
-            tbody.appendChild(tr);
-            entryCount++;
+            const tagText = signalType === "LONG" ? "踩底多" : "探顶空";
+            tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(keyPrice)}</td><td style="color:#fff">${formatPrice(latestClosed.close)}</td></tr>`;
+            count++;
         } else if (sentimentTag.includes("拦截")) {
-            const tr = document.createElement('tr');
-            tr.style.opacity = "0.5";
-            tr.innerHTML = `
-                <td>${item.coin}</td>
-                <td style="color:#888">信号受限</td>
-                <td>${sentimentTag}</td>
-                <td style="color:#888">--</td>
-                <td style="color:#888">${formatPrice(latestClosed.close)}</td>
-            `;
-            tbody.appendChild(tr);
+            tbody.innerHTML += `<tr style="opacity:0.5"><td>${item.coin}</td><td>受限</td><td>${sentimentTag}</td><td style="color:#888">${formatPrice(latestClosed.close)}</td></tr>`;
         }
         await new Promise(r => setTimeout(r, 150)); 
     }
-    
-    status.innerText = `✅ 巡检完毕，捕获 ${entryCount} 个信号。`;
+    return count;
+}
+
+// ================= 扫描 15M (双轨并行) =================
+async function scan15M() {
+    if (isScanning) return;
+    isScanning = true;
+    const status = document.getElementById('statusMain');
+    status.innerText = "⏳ 15m 巡检中，正在进行双轨寻底/探顶...";
+
+    // 独立运行 1D 池
+    const count1d = await run15mScan(cachedCoins1D, 'tbody15m_1d');
+    // 独立运行 4H 池
+    const count4h = await run15mScan(cachedCoins4H, 'tbody15m_4h');
+
+    status.innerText = `✅ 巡检完毕。1D轨捕获 ${count1d} 个，4H轨捕获 ${count4h} 个。`;
     isScanning = false;
 }
 
-// ================= 定时器对齐（北京/香港时间） =================
+// ================= 定时器 =================
 function startCycle1D() {
     const intervalMs = 24 * 60 * 60 * 1000;
     const now = Date.now();
-    
-    // 计算目标时间：UTC 16:00（即北京时间 0:00）
-    const offset = 16 * 60 * 60 * 1000;
-    const shiftedNow = now - offset;
-    const nextShifted = Math.ceil(shiftedNow / intervalMs) * intervalMs;
-    const nextTime = nextShifted + offset + 2000;
-    
-    timer1d = setTimeout(async () => {
-        await scan1D(); 
-        await scan15M(); 
-        if (isRunning) startCycle1D();
-    }, nextTime - now);
+    const offset = 16 * 60 * 60 * 1000; 
+    const nextTime = Math.ceil((now - offset) / intervalMs) * intervalMs + offset + 2000;
+    timer1d = setTimeout(async () => { await scan1D(); await scan15M(); if (isRunning) startCycle1D(); }, nextTime - now);
+}
+
+function startCycle4H() {
+    const intervalMs = 4 * 60 * 60 * 1000;
+    const now = Date.now();
+    const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000;
+    timer4h = setTimeout(async () => { await scan4H(); await scan15M(); if (isRunning) startCycle4H(); }, nextTime - now);
 }
 
 function startCycle15M() {
     const intervalMs = 15 * 60 * 1000;
     const now = Date.now();
     const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000;
-    
-    timer15m = setTimeout(async () => {
-        fetchMarketSentiment();
-        await scan15M();
-        if (isRunning) startCycle15M();
-    }, nextTime - now);
+    timer15m = setTimeout(async () => { fetchMarketSentiment(); await scan15M(); if (isRunning) startCycle15M(); }, nextTime - now);
 }
 
 function updateCountdowns() {
     if (!isRunning) return;
     const now = Date.now();
     
-    // 1D 倒计时计算
     const offset = 16 * 60 * 60 * 1000;
-    const shiftedNow = now - offset;
-    const nextShifted = Math.ceil(shiftedNow / 86400000) * 86400000;
-    const next1d = nextShifted + offset + 2000;
-    const diff1d = Math.max(0, next1d - now);
+    const diff1d = Math.max(0, (Math.ceil((now - offset) / 86400000) * 86400000 + offset + 2000) - now);
     document.getElementById('countdown1d').innerText = `${Math.floor(diff1d/3600000).toString().padStart(2,'0')}:${Math.floor((diff1d%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff1d%60000)/1000).toString().padStart(2,'0')}`;
     
-    // 15m 倒计时计算
-    const next15m = Math.ceil(now / 900000) * 900000 + 2000;
-    const diff15m = Math.max(0, next15m - now);
+    const diff4h = Math.max(0, (Math.ceil(now / 14400000) * 14400000 + 2000) - now);
+    document.getElementById('countdown4h').innerText = `${Math.floor(diff4h/3600000).toString().padStart(2,'0')}:${Math.floor((diff4h%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff4h%60000)/1000).toString().padStart(2,'0')}`;
+    
+    const diff15m = Math.max(0, (Math.ceil(now / 900000) * 900000 + 2000) - now);
     document.getElementById('countdown15m').innerText = `${Math.floor(diff15m/60000).toString().padStart(2,'0')}:${Math.floor((diff15m%60000)/1000).toString().padStart(2,'0')}`;
 }
 
@@ -412,7 +432,7 @@ function toggleAuto() {
 
     if (isRunning) {
         isRunning = false;
-        clearTimeout(timer1d); clearTimeout(timer15m); clearInterval(uiTimer);
+        clearTimeout(timer1d); clearTimeout(timer4h); clearTimeout(timer15m); clearInterval(uiTimer);
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
         panel.classList.remove('active'); status.innerText = "自动巡航已停止。";
     } else {
@@ -421,8 +441,10 @@ function toggleAuto() {
         panel.classList.add('active'); status.innerText = "系统已启动，正在对齐收盘时间...";
         fetchMarketSentiment(); 
         updateCountdowns(); uiTimer = setInterval(updateCountdowns, 1000);
-        scan1D().then(() => scan15M());
-        startCycle1D(); startCycle15M();
+        
+        // 启动时把三个级别独立跑一遍
+        scan1D().then(() => scan4H()).then(() => scan15M());
+        startCycle1D(); startCycle4H(); startCycle15M();
     }
 }
 
