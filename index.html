@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V19 (双轨独立版)</title>
+<title>OKX 极值系统 V20 (完美发散排名)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -34,7 +34,6 @@
 
     .status-box { text-align: center; padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; font-weight: 500; background: rgba(255, 179, 0, 0.1); border: 1px solid rgba(255, 179, 0, 0.3); color: var(--accent-gold); }
     
-    /* 策略区块分割 */
     .strategy-block { border: 2px solid #2d3748; border-radius: 14px; padding: 12px; margin-bottom: 25px; background: #0d1219; }
     .block-title { font-size: 16px; font-weight: bold; color: var(--accent-blue); margin-bottom: 12px; text-align: center; border-bottom: 1px dashed #2d3748; padding-bottom: 8px;}
     
@@ -53,6 +52,7 @@
     .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
     .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
     
+    .score-badge { background: linear-gradient(90deg, #ffb300, #ff8f00); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; }
     .tag-news-bull { background: rgba(0, 230, 118, 0.1); color: var(--accent-green); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(0, 230, 118, 0.2); margin-left: 3px;}
     .tag-news-bear { background: rgba(255, 82, 82, 0.1); color: var(--accent-red); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(255, 82, 82, 0.2); margin-left: 3px;}
 </style>
@@ -60,7 +60,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V19 (独立双轨)</h1>
+    <h1>⚡ 极值系统 V20 (完美发散)</h1>
 </div>
 
 <div class="sentiment-panel" id="sentimentPanel">
@@ -81,16 +81,16 @@
 
 <!-- ================= 模块一：1D 独立策略 ================= -->
 <div class="strategy-block">
-    <div class="block-title">📈 1D 级别独立策略</div>
+    <div class="block-title">📈 1D 级别 (完美发散排名)</div>
     
     <div class="section-header">
-        <div class="section-title">1D 平稳趋势定势</div>
+        <div class="section-title">1D 均线完美发散池</div>
         <button class="toggle-btn" id="toggleBtn1d" onclick="toggleTable('container1d', 'toggleBtn1d')">收起</button>
     </div>
     <div class="table-container" id="container1d">
         <table>
-            <thead><tr><th>币种</th><th>收盘价</th><th>趋势</th></tr></thead>
-            <tbody id="tbody1d"><tr><td colspan="3" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
+            <thead><tr><th>币种</th><th>完美度</th><th>回踩位</th><th>趋势</th></tr></thead>
+            <tbody id="tbody1d"><tr><td colspan="4" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
         </table>
     </div>
 
@@ -105,16 +105,16 @@
 
 <!-- ================= 模块二：4H 独立策略 ================= -->
 <div class="strategy-block">
-    <div class="block-title">📊 4H 级别独立策略</div>
+    <div class="block-title">📊 4H 级别 (完美发散排名)</div>
     
     <div class="section-header">
-        <div class="section-title">4H 平稳趋势定势</div>
+        <div class="section-title">4H 均线完美发散池</div>
         <button class="toggle-btn" id="toggleBtn4h" onclick="toggleTable('container4h', 'toggleBtn4h')">收起</button>
     </div>
     <div class="table-container" id="container4h">
         <table>
-            <thead><tr><th>币种</th><th>收盘价</th><th>趋势</th></tr></thead>
-            <tbody id="tbody4h"><tr><td colspan="3" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
+            <thead><tr><th>币种</th><th>完美度</th><th>回踩位</th><th>趋势</th></tr></thead>
+            <tbody id="tbody4h"><tr><td colspan="4" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
         </table>
     </div>
 
@@ -143,7 +143,6 @@ let isRunning = false;
 let isScanning = false; 
 let timer1d, timer4h, timer15m, uiTimer;
 
-// 两个独立的缓存池
 let cachedCoins1D = [];
 let cachedCoins4H = [];
 let globalFearGreed = 50; 
@@ -166,13 +165,9 @@ async function fetchMarketSentiment() {
         const fgJson = await fgRes.json();
         globalFearGreed = fgJson.value || 50;
         document.getElementById('fgiValue').innerText = globalFearGreed;
-        document.getElementById('fgiValue').style.color = 
-            globalFearGreed > 60 ? 'var(--accent-green)' : 
-            globalFearGreed < 40 ? 'var(--accent-red)' : 'var(--accent-gold)';
         document.getElementById('fgiDesc').innerText = fgJson.classification || "Neutral";
     } catch (e) {
         document.getElementById('fgiValue').innerText = "--";
-        document.getElementById('fgiDesc').innerText = "获取失败";
     }
 }
 
@@ -204,27 +199,75 @@ function calcEMA(klines, period) {
     for (let i = 0; i < klines.length; i++) { prevEma = (klines[i].close - prevEma) * k + prevEma; ema.push(prevEma); }
     return ema;
 }
-function calcRSI(klines, period = 14) {
-    if (klines.length <= period) return 50;
-    let gains = 0, losses = 0;
-    for (let i = 1; i <= period; i++) { let diff = klines[i].close - klines[i-1].close; if (diff >= 0) gains += diff; else losses -= diff; }
-    let avgGain = gains / period, avgLoss = losses / period;
-    for (let i = period + 1; i < klines.length; i++) {
-        let diff = klines[i].close - klines[i-1].close;
-        avgGain = ((avgGain * (period - 1)) + (diff > 0 ? diff : 0)) / period;
-        avgLoss = ((avgLoss * (period - 1)) + (diff < 0 ? -diff : 0)) / period;
+
+// ================= 核心打分系统：判断完美发散 =================
+// 返回 { trend, score, refPrice } 或 null
+function analyzeTrendPattern(k, ema5, ema20) {
+    const lastIdx = k.length - 1;
+    const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
+    const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
+    const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
+    const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
+
+    // 1. 剔除暴涨暴跌（大阴大阳）
+    if (Math.abs(c0.close - c0.open)/c0.open > 0.08 || Math.abs(c1.close - c1.open)/c1.open > 0.08) return null;
+
+    // 2. 无拐头检查（核心一票否决）
+    // 做多：EMA5 连续向上，EMA20 向上。做空反之
+    const isE5Up = e5_0 > e5_1 && e5_1 > e5_2;
+    const isE5Down = e5_0 < e5_1 && e5_1 < e5_2;
+    const isE20Up = e20_0 > e20_1;
+    const isE20Down = e20_0 < e20_1;
+
+    let trend = null;
+
+    // === 做多完美发散 ===
+    if (e5_0 > e20_0 && isE5Up && isE20Up) {
+        // 必须有下影线测试 EMA5，且收盘价站上 EMA5（不容忍实体跌破）
+        // 容差允许最低价稍微破一点点 EMA5 (1.5%以内)
+        if (c0.low <= e5_0 * 1.015 && c0.close > e5_0 * 0.995) {
+            trend = "LONG";
+        }
+    } 
+    // === 做空完美发散 ===
+    else if (e5_0 < e20_0 && isE5Down && isE20Down) {
+        // 必须有上影线测试 EMA5，且收盘价压在 EMA5 之下
+        if (c0.high >= e5_0 * 0.985 && c0.close < e5_0 * 1.005) {
+            trend = "SHORT";
+        }
     }
-    return avgLoss === 0 ? 100 : 100 - (100 / (1 + (avgGain / avgLoss)));
+
+    if (!trend) return null;
+
+    // 3. 打分机制 (满分 100)
+    let score = 0;
+
+    // A. 回踩精准度 (40分) - 影线距离 EMA5 越近越好
+    const distRatio = trend === "LONG" ? Math.abs(c0.low - e5_0) / e5_0 : Math.abs(c0.high - e5_0) / e5_0;
+    score += Math.max(0, 40 - (distRatio * 1000)); // 距离 1% 扣 10分
+
+    // B. 发散强度 (30分) - EMA5 和 EMA20 的差值
+    const divergence = Math.abs(e5_0 - e20_0) / e20_0;
+    score += Math.min(30, divergence * 500); // 发散度 6% 拿满分
+
+    // C. 斜率强度 (30分) - EMA5 的变化率
+    const slope = Math.abs(e5_0 - e5_1) / e5_1;
+    score += Math.min(30, slope * 1000); // 斜率 3% 拿满分
+
+    // 限制最高100分
+    score = Math.min(100, Math.round(score));
+
+    return { trend, score, refPrice: e5_0 };
 }
 
-// ================= 扫描 1D (独立) =================
+// ================= 扫描 1D =================
 async function scan1D() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody1d');
     
-    status.innerText = "⏳ 1D 整点收盘，正在独立定势...";
+    status.innerText = "⏳ 1D 整点收盘，正在计算完美发散分数...";
     tbody.innerHTML = ""; cachedCoins1D = [];
 
     for (let i = 0; i < FIXED_COINS.length; i++) {
@@ -233,42 +276,42 @@ async function scan1D() {
         if (data.closed.length < 30) continue;
         
         const k = data.closed;
-        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20), rsi = calcRSI(k, 14);
-        const lastIdx = k.length - 1;
-        const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
-        const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
-        const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
-        const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
-
-        const noHugeCandles = !(Math.abs(c0.close - c0.open)/c0.open > 0.08) && !(Math.abs(c1.close - c1.open)/c1.open > 0.08) && !(Math.abs(c2.close - c2.open)/c2.open > 0.08);
-        const longAlign = (e5_0 > e20_0) && (e5_1 > e20_1) && (e5_2 > e20_2);
-        const shortAlign = (e5_0 < e20_0) && (e5_1 < e20_1) && (e5_2 < e20_2);
-        const isBiasOk = Math.abs(c0.close - e20_0) / e20_0 < 0.15;
-
-        let trend = null;
-        if (noHugeCandles && isBiasOk) {
-            if (longAlign && c0.close > e5_0 && rsi > 50 && rsi < 75) trend = "LONG";
-            else if (shortAlign && c0.close < e5_0 && rsi < 50 && rsi > 25) trend = "SHORT";
+        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20);
+        
+        const result = analyzeTrendPattern(k, ema5, ema20);
+        if (result) {
+            cachedCoins1D.push({ coin, trend: result.trend, score: result.score, refPrice: result.refPrice });
         }
-
-        if (trend) {
-            cachedCoins1D.push({ coin, trend });
-            tbody.innerHTML += `<tr><td>${coin}</td><td style="color:#aaa">${formatPrice(c0.close)}</td><td><span class="${trend==='LONG'?'tag-long':'tag-short'}">${trend==='LONG'?'多头':'空头'}</span></td></tr>`;
-        }
-        await new Promise(r => setTimeout(r, 120)); 
+        await new Promise(r => setTimeout(r, 100)); 
     }
-    status.innerText = `✅ 1D 独立定势完成，锁定 ${cachedCoins1D.length} 个币。`;
+
+    // 根据分数从高到低排序
+    cachedCoins1D.sort((a, b) => b.score - a.score);
+
+    for (let item of cachedCoins1D) {
+        const tag = item.trend === "LONG" ? `<span class="tag-long">多头</span>` : `<span class="tag-short">空头</span>`;
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.coin}</td>
+                <td><span class="score-badge">${item.score}分</span></td>
+                <td style="color:#00e5ff">${formatPrice(item.refPrice)}</td>
+                <td>${tag}</td>
+            </tr>
+        `;
+    }
+    
+    status.innerText = `✅ 1D 扫描完成，按完美度锁定 ${cachedCoins1D.length} 个币。`;
     isScanning = false;
 }
 
-// ================= 扫描 4H (独立) =================
+// ================= 扫描 4H =================
 async function scan4H() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
     const tbody = document.getElementById('tbody4h');
     
-    status.innerText = "⏳ 4H 整点收盘，正在独立定势...";
+    status.innerText = "⏳ 4H 整点收盘，正在计算完美发散分数...";
     tbody.innerHTML = ""; cachedCoins4H = [];
 
     for (let i = 0; i < FIXED_COINS.length; i++) {
@@ -277,35 +320,35 @@ async function scan4H() {
         if (data.closed.length < 30) continue;
         
         const k = data.closed;
-        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20), rsi = calcRSI(k, 14);
-        const lastIdx = k.length - 1;
-        const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
-        const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
-        const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
-        const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
-
-        const noHugeCandles = !(Math.abs(c0.close - c0.open)/c0.open > 0.04) && !(Math.abs(c1.close - c1.open)/c1.open > 0.04) && !(Math.abs(c2.close - c2.open)/c2.open > 0.04);
-        const longAlign = (e5_0 > e20_0) && (e5_1 > e20_1) && (e5_2 > e20_2);
-        const shortAlign = (e5_0 < e20_0) && (e5_1 < e20_1) && (e5_2 < e20_2);
-        const isBiasOk = Math.abs(c0.close - e20_0) / e20_0 < 0.08;
-
-        let trend = null;
-        if (noHugeCandles && isBiasOk) {
-            if (longAlign && c0.close > e5_0 && rsi > 50 && rsi < 75) trend = "LONG";
-            else if (shortAlign && c0.close < e5_0 && rsi < 50 && rsi > 25) trend = "SHORT";
+        const ema5 = calcEMA(k, 5), ema20 = calcEMA(k, 20);
+        
+        const result = analyzeTrendPattern(k, ema5, ema20);
+        if (result) {
+            cachedCoins4H.push({ coin, trend: result.trend, score: result.score, refPrice: result.refPrice });
         }
-
-        if (trend) {
-            cachedCoins4H.push({ coin, trend });
-            tbody.innerHTML += `<tr><td>${coin}</td><td style="color:#aaa">${formatPrice(c0.close)}</td><td><span class="${trend==='LONG'?'tag-long':'tag-short'}">${trend==='LONG'?'多头':'空头'}</span></td></tr>`;
-        }
-        await new Promise(r => setTimeout(r, 120)); 
+        await new Promise(r => setTimeout(r, 100)); 
     }
-    status.innerText = `✅ 4H 独立定势完成，锁定 ${cachedCoins4H.length} 个币。`;
+
+    // 根据分数从高到低排序
+    cachedCoins4H.sort((a, b) => b.score - a.score);
+
+    for (let item of cachedCoins4H) {
+        const tag = item.trend === "LONG" ? `<span class="tag-long">多头</span>` : `<span class="tag-short">空头</span>`;
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.coin}</td>
+                <td><span class="score-badge">${item.score}分</span></td>
+                <td style="color:#00e5ff">${formatPrice(item.refPrice)}</td>
+                <td>${tag}</td>
+            </tr>
+        `;
+    }
+    
+    status.innerText = `✅ 4H 扫描完成，按完美度锁定 ${cachedCoins4H.length} 个币。`;
     isScanning = false;
 }
 
-// ================= 15M 进场辅助函数 =================
+// ================= 15M 进场辅助 =================
 async function run15mScan(pool, tbodyId) {
     const tbody = document.getElementById(tbodyId);
     tbody.innerHTML = "";
@@ -323,7 +366,6 @@ async function run15mScan(pool, tbodyId) {
         const realTimePrice = data15m.current.close;
         
         let signalType = null, keyPrice = 0;
-        let sentimentTag = `<span class="tag-news-bull">允许</span>`;
         const tolerance = 0.0015;
 
         if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
@@ -331,30 +373,17 @@ async function run15mScan(pool, tbodyId) {
             let targetLow = bearishK.length > 0 ? Math.min(...bearishK.map(k => k.low)) : minLow20;
 
             if (latestClosed.low <= targetLow * (1 + tolerance)) {
-                if (!((latestClosed.open - latestClosed.close)/latestClosed.open > 0.01 && latestClosed.close - latestClosed.low < latestClosed.open - latestClosed.close)) {
-                    if (globalFearGreed < 25) {
-                        sentimentTag = `<span class="tag-news-bear">恐慌拦截</span>`;
-                    } else {
-                        signalType = "LONG"; keyPrice = targetLow;
-                        if (realTimePrice < targetLow * 0.985) signalType = null; 
-                    }
-                }
+                signalType = "LONG"; keyPrice = targetLow;
+                if (realTimePrice < targetLow * 0.985) signalType = null; 
             }
         }
-        
         else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
             const bullishK = prev20.filter(k => k.close > k.open);
             let targetHigh = bullishK.length > 0 ? Math.max(...bullishK.map(k => k.high)) : maxHigh20;
 
             if (latestClosed.high >= targetHigh * (1 - tolerance)) {
-                if (!((latestClosed.close - latestClosed.open)/latestClosed.open > 0.01 && latestClosed.high - latestClosed.close < latestClosed.close - latestClosed.open)) {
-                    if (globalFearGreed > 80) {
-                        sentimentTag = `<span class="tag-news-bear">贪婪拦截</span>`;
-                    } else {
-                        signalType = "SHORT"; keyPrice = targetHigh;
-                        if (realTimePrice > targetHigh * 1.015) signalType = null;
-                    }
-                }
+                signalType = "SHORT"; keyPrice = targetHigh;
+                if (realTimePrice > targetHigh * 1.015) signalType = null;
             }
         }
 
@@ -363,24 +392,20 @@ async function run15mScan(pool, tbodyId) {
             const tagText = signalType === "LONG" ? "踩底多" : "探顶空";
             tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(keyPrice)}</td><td style="color:#fff">${formatPrice(latestClosed.close)}</td></tr>`;
             count++;
-        } else if (sentimentTag.includes("拦截")) {
-            tbody.innerHTML += `<tr style="opacity:0.5"><td>${item.coin}</td><td>受限</td><td>${sentimentTag}</td><td style="color:#888">${formatPrice(latestClosed.close)}</td></tr>`;
         }
-        await new Promise(r => setTimeout(r, 150)); 
+        await new Promise(r => setTimeout(r, 100)); 
     }
     return count;
 }
 
-// ================= 扫描 15M (双轨并行) =================
+// ================= 扫描 15M =================
 async function scan15M() {
     if (isScanning) return;
     isScanning = true;
     const status = document.getElementById('statusMain');
-    status.innerText = "⏳ 15m 巡检中，正在进行双轨寻底/探顶...";
+    status.innerText = "⏳ 15m 巡检中，正在双轨寻找极致进场位...";
 
-    // 独立运行 1D 池
     const count1d = await run15mScan(cachedCoins1D, 'tbody15m_1d');
-    // 独立运行 4H 池
     const count4h = await run15mScan(cachedCoins4H, 'tbody15m_4h');
 
     status.innerText = `✅ 巡检完毕。1D轨捕获 ${count1d} 个，4H轨捕获 ${count4h} 个。`;
@@ -442,7 +467,6 @@ function toggleAuto() {
         fetchMarketSentiment(); 
         updateCountdowns(); uiTimer = setInterval(updateCountdowns, 1000);
         
-        // 启动时把三个级别独立跑一遍
         scan1D().then(() => scan4H()).then(() => scan15M());
         startCycle1D(); startCycle4H(); startCycle15M();
     }
