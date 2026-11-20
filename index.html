@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V24 (15m探底)</title>
+<title>OKX 极值系统 V25 (声音报警)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -62,7 +62,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V24 (阴线踩底)</h1>
+    <h1>⚡ 极值系统 V25 (声音报警)</h1>
 </div>
 
 <div class="sentiment-panel" id="sentimentPanel">
@@ -129,6 +129,36 @@ let isScanning = false;
 let timer1d, timer15m, uiTimer;
 let cachedCoins1D = [];
 let globalFearGreed = 50; 
+
+// === 音频初始化变量 ===
+let audioCtx = null;
+
+// === 播放提示音的函数 ===
+function playAlertSound() {
+    if (!audioCtx) return;
+    // 如果处于挂起状态（被浏览器暂停），尝试恢复
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    // 设置音调和波形
+    oscillator.type = 'sine'; // 正弦波，声音比较清脆
+    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // 起始音调 A5
+    oscillator.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.1); // 迅速滑向 A6 (更尖锐)
+    
+    // 设置音量包络（渐弱）
+    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + 0.6);
+}
 
 function toggleTable(containerId, btnId) {
     const container = document.getElementById(containerId);
@@ -273,7 +303,6 @@ async function run15mScan() {
         const item = cachedCoins1D[i];
         const data15m = await fetchKlinesData(item.coin, "15m");
         
-        // 需要前10根历史 + 1根最新已收盘 = 至少11根
         if (data15m.closed.length >= 11 && data15m.current) {
             const latestClosed = data15m.closed[data15m.closed.length - 1];
             const prev10 = data15m.closed.slice(-11, -1); 
@@ -283,24 +312,18 @@ async function run15mScan() {
             const realTimePrice = data15m.current.close;
             
             let signalType = null, keyPrice = 0;
-            const tolerance = 0.0015; // 0.15% 容差
+            const tolerance = 0.0015;
 
-            // === 做多逻辑：收阴线 + 探底前10根最低点 ===
             if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
-                // 最低价达到或击穿前10根最低点
                 if (latestClosed.low <= recentLow10 * (1 + tolerance)) {
-                    // 防砸盘：实时现价不能跌破支撑太深（-1.5%以内）
                     if (realTimePrice >= recentLow10 * 0.985) {
                         signalType = "LONG";
                         keyPrice = recentLow10;
                     }
                 }
             }
-            // === 做空逻辑：收阳线 + 探顶前10根最高点 ===
             else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
-                // 最高价达到或突破前10根最高点
                 if (latestClosed.high >= recentHigh10 * (1 - tolerance)) {
-                    // 防逼空：实时现价不能突破阻力太远（+1.5%以内）
                     if (realTimePrice <= recentHigh10 * 1.015) {
                         signalType = "SHORT";
                         keyPrice = recentHigh10;
@@ -324,7 +347,14 @@ async function scan15M() {
     if (isScanning) return;
     isScanning = true;
     const count = await run15mScan();
-    resetProgress(`✅ 巡检完毕。15m 级别共捕获 ${count} 个回踩/反抽信号。`);
+    
+    if (count > 0) {
+        playAlertSound(); // 触发声音报警
+        resetProgress(`🚨 发现 ${count} 个信号！(已发声提醒)`);
+    } else {
+        resetProgress(`✅ 巡检完毕，暂无符合条件的新信号。`);
+    }
+    
     isScanning = false;
 }
 
@@ -365,6 +395,15 @@ function toggleAuto() {
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
         panel.classList.remove('active'); resetProgress("自动巡航已停止。");
     } else {
+        // 【关键解锁】用户点击按钮时，初始化并解锁 AudioContext
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        playAlertSound(); // 启动时响一声，证明声音可用
+
         isRunning = true;
         btn.innerText = "停止自动巡航"; btn.classList.add('stop');
         panel.classList.add('active'); resetProgress("系统已启动，正在对齐收盘时间...");
