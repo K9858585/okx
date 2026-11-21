@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 15m 极速稳站 V32 (铁血防雷)</title>
+<title>OKX 1H 强趋势稳站 V33</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -50,13 +50,13 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 15m 极速稳站 V32 (铁血防雷)</h1>
+    <h1>⚡ 1H 强趋势稳站 V33</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
 
 <div class="timer-panel" id="timerPanel">
-    <div class="timer-row"><span class="timer-label">距离下次 15m 扫描</span><span class="timer-value" id="countdown15m">--:--</span></div>
+    <div class="timer-row"><span class="timer-label">距离下次 1H 扫描</span><span class="timer-value" id="countdown1h">--:--:--</span></div>
 </div>
 
 <div class="status-container" id="statusContainer">
@@ -70,11 +70,11 @@
 </div>
 
 <div class="strategy-block">
-    <div class="block-title">📊 15m 均线完美发散稳站池</div>
+    <div class="block-title">📊 1H 均线+MACD 完美稳站池</div>
     <div class="table-container">
         <table>
-            <thead><tr><th>币种</th><th>方向</th><th>关键位(EMA5)</th><th>收盘价</th></tr></thead>
-            <tbody id="tbody15m"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号，请启动巡航</td></tr></tbody>
+            <thead><tr><th>币种</th><th>方向</th><th>MACD状态</th><th>关键位(EMA20)</th><th>收盘价</th></tr></thead>
+            <tbody id="tbody1h"><tr><td colspan="5" style="text-align:center; color:#666;">暂无信号，请启动巡航</td></tr></tbody>
         </table>
     </div>
 </div>
@@ -97,7 +97,7 @@ const FIXED_COINS = [
 
 let isRunning = false;
 let isScanning = false; 
-let timer15m, uiTimer;
+let timer1h, uiTimer;
 
 let audioCtx = null;
 let ringInterval = null;
@@ -140,10 +140,10 @@ function resetProgress(text) {
 }
 
 async function fetchKlinesData(coin) {
-    const limit = 30;
+    const limit = 100; // 1H 周期需要更多数据计算 MACD
     try {
         const okxSym = `${coin}-USDT-SWAP`;
-        const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=15m&limit=${limit}`);
+        const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=1H&limit=${limit}`);
         const json = await res.json();
         if (json.code === "0" && json.data.length > 0) {
             const allData = json.data.reverse();
@@ -158,10 +158,20 @@ async function fetchKlinesData(coin) {
     return { closed: [], current: null };
 }
 
-function calcEMA(klines, period) {
-    let ema = [], k = 2 / (period + 1), prevEma = klines[0].close;
-    for (let i = 0; i < klines.length; i++) { prevEma = (klines[i].close - prevEma) * k + prevEma; ema.push(prevEma); }
+// 计算 EMA 数组
+function calcEMAArr(arr, period) {
+    let ema = [], k = 2 / (period + 1), prevEma = arr[0];
+    for (let i = 0; i < arr.length; i++) { prevEma = (arr[i] - prevEma) * k + prevEma; ema.push(prevEma); }
     return ema;
+}
+
+// 计算 MACD
+function calcMACD(closes) {
+    const ema12 = calcEMAArr(closes, 12);
+    const ema26 = calcEMAArr(closes, 26);
+    const dif = ema12.map((v, i) => v - ema26[i]);
+    const dea = calcEMAArr(dif, 9);
+    return { dif, dea };
 }
 
 async function asyncPool(poolLimit, array, iteratorFn) {
@@ -180,8 +190,8 @@ async function asyncPool(poolLimit, array, iteratorFn) {
     return Promise.all(ret);
 }
 
-async function run15mScan() {
-    const tbody = document.getElementById('tbody15m');
+async function run1hScan() {
+    const tbody = document.getElementById('tbody1h');
     tbody.innerHTML = "";
     let count = 0;
     let completed = 0;
@@ -190,80 +200,64 @@ async function run15mScan() {
         const data = await fetchKlinesData(coin);
         
         completed++;
-        updateProgress(completed, FIXED_COINS.length, `[极速扫描中] 已完成: ${completed} / ${FIXED_COINS.length}`);
+        updateProgress(completed, FIXED_COINS.length, `[1H极速扫描] 已完成: ${completed} / ${FIXED_COINS.length}`);
 
-        if (data.closed.length >= 21 && data.current) {
+        // 至少需要 35 根 K 线来计算稳定的 MACD
+        if (data.closed.length >= 35 && data.current) {
             const k = data.closed;
-            const ema5 = calcEMA(k, 5);
-            const ema20 = calcEMA(k, 20);
+            const closes = k.map(x => x.close);
+            
+            const ema20 = calcEMAArr(closes, 20);
+            const macd = calcMACD(closes);
             
             const lastIdx = k.length - 1;
-            const c0 = k[lastIdx]; 
-            const e5_0 = ema5[lastIdx];
-            const e20_0 = ema20[lastIdx];
-            const e5_1 = ema5[lastIdx - 1];
-            const e5_2 = ema5[lastIdx - 2];
-            const e20_1 = ema20[lastIdx - 1];
-
             const realTimePrice = data.current.close;
 
-            const isE5Up = e5_0 > e5_1 && e5_1 > e5_2;
-            const isE5Down = e5_0 < e5_1 && e5_1 < e5_2;
-            const isE20Up = e20_0 > e20_1;
-            const isE20Down = e20_0 < e20_1;
+            // 1. MACD 零轴判定
+            const curDIF = macd.dif[lastIdx];
+            const curDEA = macd.dea[lastIdx];
+            const macdUp = curDIF > 0 && curDEA > 0;
+            const macdDown = curDIF < 0 && curDEA < 0;
+
+            // 2. 过去 5 根 K 线站上/站下 EMA20
+            let past5Above = true;
+            let past5Below = true;
+            for (let i = 1; i <= 5; i++) {
+                if (k[lastIdx - 5 + i].close <= ema20[lastIdx - 5 + i]) past5Above = false;
+                if (k[lastIdx - 5 + i].close >= ema20[lastIdx - 5 + i]) past5Below = false;
+            }
+
+            // 3. 当前 K 线影线不碰均线
+            const curK = k[lastIdx];
+            const curE20 = ema20[lastIdx];
+            // 做多：下影线完全在 EMA20 上方
+            const shadowAbove = curK.low > curE20; 
+            // 做空：上影线完全在 EMA20 下方
+            const shadowBelow = curK.high < curE20; 
 
             let signalType = null;
 
-            // === 做多：多头向上 + 收阴 + 稳站 EMA5 + 拒绝长上影 ===
-            if (e5_0 > e20_0 && isE5Up && isE20Up) {
-                if (c0.close < c0.open) { 
-                    // 计算实体、上影线、下影线
-                    const body = c0.open - c0.close;
-                    const upperShadow = c0.high - c0.open;
-                    const lowerShadow = c0.close - c0.low;
-                    
-                    // 1. 最低价绝对不能跌破 EMA5（容差 0.05%）
-                    // 2. 上影线不能超过实体的 1.5 倍（杜绝避雷针）
-                    // 3. 实体不能太大（涨跌幅 < 1%）
-                    // 4. 必须贴近 EMA5（距离不超过 0.15%）
-                    if (c0.low >= e5_0 * 0.9995 && 
-                        upperShadow <= body * 1.5 &&
-                        body / c0.open < 0.01 &&
-                        c0.low <= e5_0 * 1.0015) {
-                        
-                        if (realTimePrice <= c0.close * 1.005 && realTimePrice >= c0.low * 0.999) {
-                            signalType = "LONG";
-                        }
-                    }
+            // 做多综合判定
+            if (macdUp && past5Above && shadowAbove && curK.close > curE20) {
+                // 防追高
+                if (realTimePrice <= curK.close * 1.01) {
+                    signalType = "LONG";
                 }
             }
-            // === 做空：空头向下 + 收阳 + 稳站 EMA5 + 拒绝长下影 ===
-            else if (e5_0 < e20_0 && isE5Down && isE20Down) {
-                if (c0.close > c0.open) { 
-                    const body = c0.close - c0.open;
-                    const lowerShadow = c0.open - c0.low;
-                    const upperShadow = c0.high - c0.close;
-
-                    // 1. 最高价绝对不能突破 EMA5
-                    // 2. 下影线不能超过实体的 1.5 倍
-                    // 3. 实体不能太大
-                    // 4. 必须贴近 EMA5
-                    if (c0.high <= e5_0 * 1.0005 && 
-                        lowerShadow <= body * 1.5 &&
-                        body / c0.open < 0.01 &&
-                        c0.high >= e5_0 * 0.9985) {
-                        
-                        if (realTimePrice >= c0.close * 0.995 && realTimePrice <= c0.high * 1.001) {
-                            signalType = "SHORT";
-                        }
-                    }
+            // 做空综合判定
+            else if (macdDown && past5Below && shadowBelow && curK.close < curE20) {
+                // 防追空
+                if (realTimePrice >= curK.close * 0.99) {
+                    signalType = "SHORT";
                 }
             }
 
             if (signalType) {
                 const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
-                const tagText = signalType === "LONG" ? "完美稳站多" : "完美稳站空";
-                tbody.innerHTML += `<tr><td>${coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(e5_0)}</td><td style="color:#fff">${formatPrice(c0.close)}</td></tr>`;
+                const tagText = signalType === "LONG" ? "完美多头" : "完美空头";
+                const macdText = signalType === "LONG" ? "零轴上" : "零轴下";
+                
+                tbody.innerHTML += `<tr><td>${coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#aaa">${macdText}</td><td style="color:#00e5ff">${formatPrice(curE20)}</td><td style="color:#fff">${formatPrice(curK.close)}</td></tr>`;
                 count++;
             }
         }
@@ -272,40 +266,41 @@ async function run15mScan() {
     return count;
 }
 
-async function scan15M() {
+async function scan1H() {
     if (isScanning) return;
     isScanning = true;
     resetProgress("准备启动并发引擎...");
     
-    const count = await run15mScan();
+    const count = await run1hScan();
     
     if (count > 0) {
         playLongAlert();
-        resetProgress(`🚨 极速扫描完成：发现 ${count} 个完美稳站信号！`);
+        resetProgress(`🚨 极速扫描完成：发现 ${count} 个 1H 强趋势信号！`);
     } else {
-        resetProgress(`✅ 扫描完成，本轮无完美信号。`);
+        resetProgress(`✅ 1H 扫描完成，本轮无完美信号。`);
     }
     
     isScanning = false;
 }
 
-function startCycle15M() {
-    const intervalMs = 15 * 60 * 1000;
+function startCycle1H() {
+    const intervalMs = 60 * 60 * 1000;
     const now = Date.now();
+    // 卡在整点后的第 2 秒触发
     const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000;
     
-    timer15m = setTimeout(async () => { 
-        await scan15M(); 
-        if (isRunning) startCycle15M(); 
+    timer1h = setTimeout(async () => { 
+        await scan1H(); 
+        if (isRunning) startCycle1H(); 
     }, nextTime - now);
 }
 
 function updateCountdowns() {
     if (!isRunning) return;
     const now = Date.now();
-    const next15m = Math.ceil(now / 900000) * 900000 + 2000;
-    const diff15m = Math.max(0, next15m - now);
-    document.getElementById('countdown15m').innerText = `${Math.floor(diff15m/60000).toString().padStart(2,'0')}:${Math.floor((diff15m%60000)/1000).toString().padStart(2,'0')}`;
+    const next1h = Math.ceil(now / 3600000) * 3600000 + 2000;
+    const diff1h = Math.max(0, next1h - now);
+    document.getElementById('countdown1h').innerText = `${Math.floor(diff1h/3600000).toString().padStart(2,'0')}:${Math.floor((diff1h%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff1h%60000)/1000).toString().padStart(2,'0')}`;
 }
 
 function toggleAuto() {
@@ -314,7 +309,7 @@ function toggleAuto() {
 
     if (isRunning) {
         isRunning = false;
-        clearTimeout(timer15m); clearInterval(uiTimer);
+        clearTimeout(timer1h); clearInterval(uiTimer);
         if (ringInterval) clearInterval(ringInterval);
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
         panel.classList.remove('active'); resetProgress("自动巡航已停止。");
@@ -333,8 +328,8 @@ function toggleAuto() {
         updateCountdowns(); 
         uiTimer = setInterval(updateCountdowns, 1000);
         
-        scan15M();
-        startCycle15M();
+        scan1H();
+        startCycle1H();
     }
 }
 
