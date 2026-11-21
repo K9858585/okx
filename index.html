@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 极值系统 V28 (大池子严格版)</title>
+<title>OKX 15m 极速稳站 V30</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -16,17 +16,11 @@
     .header { text-align: center; margin-bottom: 15px; }
     .header h1 { font-size: 22px; color: var(--accent-blue); text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
 
-    .sentiment-panel { background: linear-gradient(145deg, #2a1b1b, #1a1111); border: 1px solid #553333; border-radius: 12px; padding: 12px; margin-bottom: 15px; text-align: center; }
-    .sentiment-title { font-size: 13px; color: var(--accent-gold); font-weight: bold; margin-bottom: 5px; }
-    .sentiment-value { font-size: 24px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
-    .sentiment-desc { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
-
     .timer-panel { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; text-align: center; display: none;}
     .timer-panel.active { display: block; }
-    .timer-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 13px; font-weight: bold; }
-    .timer-row:last-child { margin-bottom: 0; }
+    .timer-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; }
     .timer-label { color: var(--text-sub); }
-    .timer-value { color: var(--accent-gold); font-family: monospace; font-size: 14px; }
+    .timer-value { color: var(--accent-gold); font-family: monospace; font-size: 16px; }
 
     .master-btn { display: block; width: 100%; padding: 16px; background: linear-gradient(90deg, #00e676, #00b0ff); color: #000; font-size: 17px; font-weight: bold; border: none; border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);}
     .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
@@ -37,45 +31,32 @@
     .status-text { text-align: left; }
     .status-percent { font-weight: bold; color: #fff; }
     .progress-bar { width: 100%; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width 0.2s ease; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width 0.1s ease; }
     
     .strategy-block { border: 2px solid #2d3748; border-radius: 14px; padding: 12px; margin-bottom: 25px; background: #0d1219; }
     .block-title { font-size: 16px; font-weight: bold; color: var(--accent-blue); margin-bottom: 12px; text-align: center; border-bottom: 1px dashed #2d3748; padding-bottom: 8px;}
     
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-left: 5px; border-left: 4px solid var(--accent-blue); }
-    .section-title { font-size: 14px; color: #fff; font-weight: bold; }
-    .toggle-btn { background: #2d3748; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s; }
-    .toggle-btn:active { background: #4a5568; }
-    
     .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 15px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
-    th { background: #1e2532; color: var(--text-sub); padding: 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
+    th { background: #1e2532; color: var(--text-sub); padding: 12px 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
     th:first-child { text-align: left; }
-    td { padding: 10px; text-align: right; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
+    td { padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
     td:first-child { text-align: left; font-weight: bold; color: #fff; }
 
-    .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
-    .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 3px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
-    .score-badge { background: linear-gradient(90deg, #ffb300, #ff8f00); color: #000; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+    .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
+    .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
 </style>
 </head>
 <body>
 
 <div class="header">
-    <h1>⚡ 极值系统 V28 (精准贴线)</h1>
-</div>
-
-<div class="sentiment-panel" id="sentimentPanel">
-    <div class="sentiment-title">📊 实时市场情绪</div>
-    <div class="sentiment-value" id="fgiValue">--</div>
-    <div class="sentiment-desc" id="fgiDesc">正在获取数据...</div>
+    <h1>⚡ 15m 极速稳站 V30</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
 
 <div class="timer-panel" id="timerPanel">
-    <div class="timer-row"><span class="timer-label">1D 扫描倒计时</span><span class="timer-value" id="countdown1d">--:--:--</span></div>
-    <div class="timer-row"><span class="timer-label">15m 进场倒计时</span><span class="timer-value" id="countdown15m">--:--</span></div>
+    <div class="timer-row"><span class="timer-label">距离下次 15m 扫描</span><span class="timer-value" id="countdown15m">--:--</span></div>
 </div>
 
 <div class="status-container" id="statusContainer">
@@ -88,44 +69,25 @@
     </div>
 </div>
 
-<!-- ================= 模块一：1D 独立策略 ================= -->
 <div class="strategy-block">
-    <div class="block-title">📈 1D 级别 (完美贴线排名)</div>
-    
-    <div class="section-header">
-        <div class="section-title">1D 均线完美发散池</div>
-        <button class="toggle-btn" id="toggleBtn1d" onclick="toggleTable('container1d', 'toggleBtn1d')">收起</button>
-    </div>
-    <div class="table-container" id="container1d">
-        <table>
-            <thead><tr><th>币种</th><th>完美度</th><th>回踩位</th><th>趋势</th></tr></thead>
-            <tbody id="tbody1d"><tr><td colspan="4" style="text-align:center; color:#666;">暂无数据</td></tr></tbody>
-        </table>
-    </div>
-
-    <div class="section-header"><div class="section-title">15m 探底/探顶进场 (前10根极值)</div></div>
+    <div class="block-title">📊 15m 均线完美发散稳站池</div>
     <div class="table-container">
         <table>
-            <thead><tr><th>币种</th><th>信号</th><th>关键位</th><th>收盘</th></tr></thead>
-            <tbody id="tbody15m"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号</td></tr></tbody>
+            <thead><tr><th>币种</th><th>方向</th><th>关键位(EMA5)</th><th>收盘价</th></tr></thead>
+            <tbody id="tbody15m"><tr><td colspan="4" style="text-align:center; color:#666;">暂无信号，请启动巡航</td></tr></tbody>
         </table>
     </div>
 </div>
 
 <script>
 const OKX_URL = "https://www.okx.com/api/v5/market/candles";
-const NEWS_API = "https://cryptocurrency.cv/api";
 
-// 【最新合并池】包含了截图中的所有币种 + 之前的币种
 const FIXED_COINS = [
-    // 截图新增币种
     "UP", "ZRO", "XPL", "BERA", "CRWV", "AVGO", "NIGHT", "ICP", "META", 
     "APT", "SAMSUNG", "PENGU", "JUP", "XLM", "ZHIPU", "CRV", "TSM", "MUU", 
     "TRX", "ONDO", "VVV", "AAOI", "PONS", "ASTER", "SHIB", "OP", "DOT", 
     "LITE", "NBIS", "SPY", "UVXY", "ZHONGJIU", "MRVL", "TSLA", "SKDD", 
     "AAVE", "INJ", "DRAM", "BZ", "AAPL", "SQQQ", "TAO", "STRK", "ARB", "AVAX",
-    
-    // 之前的币种（去重后）
     "ANT", "BTC", "ETH", "OKB", "SOL", "DOGE", "XRP", "BCH", "DOOD", "ZEC", "SNDK", 
     "XAU", "NVDA", "IRYS", "MMT", "PIEVERSE", "SOXL", "AKE", "PIPPIN", "SPCX", "SKHYNIX", 
     "BTW", "MU", "HUMA", "HYPE", "CL", "PEPE", "XAG", "CAP", "PROS", 
@@ -135,9 +97,7 @@ const FIXED_COINS = [
 
 let isRunning = false;
 let isScanning = false; 
-let timer1d, timer15m, uiTimer;
-let cachedCoins1D = [];
-let globalFearGreed = 50; 
+let timer15m, uiTimer;
 
 let audioCtx = null;
 let ringInterval = null;
@@ -166,18 +126,6 @@ function playLongAlert() {
     ringInterval = setInterval(ring, 400);
 }
 
-function toggleTable(containerId, btnId) {
-    const container = document.getElementById(containerId);
-    const btn = document.getElementById(btnId);
-    if (container.style.display === 'none') {
-        container.style.display = 'block';
-        btn.innerText = '收起';
-    } else {
-        container.style.display = 'none';
-        btn.innerText = '展开';
-    }
-}
-
 function updateProgress(current, total, text) {
     const percent = Math.round((current / total) * 100);
     document.getElementById('statusText').innerText = text;
@@ -191,26 +139,11 @@ function resetProgress(text) {
     document.getElementById('progressFill').style.width = `0%`;
 }
 
-async function fetchMarketSentiment() {
-    try {
-        const fgRes = await fetch(`${NEWS_API}/market/fear-greed`);
-        const fgJson = await fgRes.json();
-        globalFearGreed = fgJson.value || 50;
-        document.getElementById('fgiValue').innerText = globalFearGreed;
-        document.getElementById('fgiDesc').innerText = fgJson.classification || "Neutral";
-    } catch (e) {
-        document.getElementById('fgiValue').innerText = "--";
-    }
-}
-
-async function fetchKlinesData(coin, interval) {
-    const limit = 60;
+async function fetchKlinesData(coin) {
+    const limit = 30;
     try {
         const okxSym = `${coin}-USDT-SWAP`;
-        let okxInt = "15m";
-        if (interval === "1d") okxInt = "1D";
-        
-        const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=${okxInt}&limit=${limit}`);
+        const res = await fetch(`${OKX_URL}?instId=${okxSym}&bar=15m&limit=${limit}`);
         const json = await res.json();
         if (json.code === "0" && json.data.length > 0) {
             const allData = json.data.reverse();
@@ -218,7 +151,7 @@ async function fetchKlinesData(coin, interval) {
             const currentData = allData[allData.length - 1];
             return {
                 closed: closedData.map(d => ({ open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) })),
-                current: { open: parseFloat(currentData[1]), high: parseFloat(currentData[2]), low: parseFloat(currentData[3]), close: parseFloat(currentData[4]) }
+                current: { close: parseFloat(currentData[4]) }
             };
         }
     } catch(e) {}
@@ -231,133 +164,71 @@ function calcEMA(klines, period) {
     return ema;
 }
 
-// === 【核心修改】：极度严苛的影线贴合测试 ===
-function analyzeTrendPattern(k, ema5, ema20) {
-    const lastIdx = k.length - 1;
-    const c0 = k[lastIdx], c1 = k[lastIdx-1], c2 = k[lastIdx-2];
-    const e5_0 = ema5[lastIdx], e20_0 = ema20[lastIdx];
-    const e5_1 = ema5[lastIdx-1], e20_1 = ema20[lastIdx-1];
-    const e5_2 = ema5[lastIdx-2], e20_2 = ema20[lastIdx-2];
-
-    // 剔除超级大阴大阳
-    if (Math.abs(c0.close - c0.open)/c0.open > 0.08 || Math.abs(c1.close - c1.open)/c1.open > 0.08) return null;
-
-    // 无拐头要求：最近 3 根均线排列必须一致
-    const isE5Up = e5_0 > e5_1 && e5_1 > e5_2;
-    const isE5Down = e5_0 < e5_1 && e5_1 < e5_2;
-    const isE20Up = e20_0 > e20_1;
-    const isE20Down = e20_0 < e20_1;
-
-    let trend = null;
-    let shadowDist = 1; 
-
-    // === 做多：下影线测试 EMA5 ===
-    if (e5_0 > e20_0 && isE5Up && isE20Up) {
-        const nearLine = c0.low <= e5_0 * 1.003 && c0.low >= e5_0 * 0.995;
-        if (c0.close > e5_0 && nearLine) {
-            trend = "LONG";
-            shadowDist = Math.abs(c0.low - e5_0) / e5_0; 
-        }
-    } 
-    // === 做空：上影线测试 EMA5 ===
-    else if (e5_0 < e20_0 && isE5Down && isE20Down) {
-        const nearLine = c0.high >= e5_0 * 0.997 && c0.high <= e5_0 * 1.005;
-        if (c0.close < e5_0 && nearLine) {
-            trend = "SHORT";
-            shadowDist = Math.abs(c0.high - e5_0) / e5_0;
-        }
-    }
-
-    if (!trend) return null;
-
-    let score = 0;
-    score += Math.max(0, 40 - (shadowDist * 13000)); 
-    const divergence = Math.abs(e5_0 - e20_0) / e20_0;
-    score += Math.min(30, divergence * 500); 
-    const slope = Math.abs(e5_0 - e5_1) / e5_1;
-    score += Math.min(30, slope * 1000); 
-    score = Math.min(100, Math.round(score));
-
-    return { trend, score, refPrice: e5_0 };
-}
-
-async function scan1D() {
-    if (isScanning) return;
-    isScanning = true;
-    const tbody = document.getElementById('tbody1d');
-    tbody.innerHTML = ""; cachedCoins1D = [];
-
-    for (let i = 0; i < FIXED_COINS.length; i++) {
-        updateProgress(i, FIXED_COINS.length, `[1D定势] 正在分析: ${FIXED_COINS[i]}`);
-        const data = await fetchKlinesData(FIXED_COINS[i], "1d");
-        if (data.closed.length >= 30) {
-            const k = data.closed;
-            const result = analyzeTrendPattern(k, calcEMA(k, 5), calcEMA(k, 20));
-            if (result) cachedCoins1D.push({ coin: FIXED_COINS[i], trend: result.trend, score: result.score, refPrice: result.refPrice });
-        }
-        await new Promise(r => setTimeout(r, 80)); 
-    }
-
-    updateProgress(FIXED_COINS.length, FIXED_COINS.length, `[1D定势] 扫描完成`);
-    cachedCoins1D.sort((a, b) => b.score - a.score);
-    for (let item of cachedCoins1D) {
-        const tag = item.trend === "LONG" ? `<span class="tag-long">多头</span>` : `<span class="tag-short">空头</span>`;
-        tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="score-badge">${item.score}分</span></td><td style="color:#00e5ff">${formatPrice(item.refPrice)}</td><td>${tag}</td></tr>`;
-    }
-    isScanning = false;
-}
-
 async function run15mScan() {
     const tbody = document.getElementById('tbody15m');
     tbody.innerHTML = "";
     let count = 0;
 
-    if (cachedCoins1D.length === 0) {
-        resetProgress("ℹ️ 没有符合日线趋势的币种，跳过 15m 扫描。");
-        return 0;
-    }
-
-    for (let i = 0; i < cachedCoins1D.length; i++) {
-        updateProgress(i, cachedCoins1D.length, `[15m进场] 正在寻找: ${cachedCoins1D[i].coin}`);
-        const item = cachedCoins1D[i];
-        const data15m = await fetchKlinesData(item.coin, "15m");
+    for (let i = 0; i < FIXED_COINS.length; i++) {
+        updateProgress(i, FIXED_COINS.length, `[扫描中] 正在分析: ${FIXED_COINS[i]}`);
+        const coin = FIXED_COINS[i];
+        const data = await fetchKlinesData(coin);
         
-        if (data15m.closed.length >= 11 && data15m.current) {
-            const latestClosed = data15m.closed[data15m.closed.length - 1];
-            const prev10 = data15m.closed.slice(-11, -1); 
+        if (data.closed.length >= 21 && data.current) {
+            const k = data.closed;
+            const ema5 = calcEMA(k, 5);
+            const ema20 = calcEMA(k, 20);
             
-            const recentHigh10 = Math.max(...prev10.map(k => k.high));
-            const recentLow10 = Math.min(...prev10.map(k => k.low));
-            const realTimePrice = data15m.current.close;
-            
-            let signalType = null, keyPrice = 0;
-            const tolerance = 0.0015;
+            const lastIdx = k.length - 1;
+            const c0 = k[lastIdx]; 
+            const e5_0 = ema5[lastIdx];
+            const e20_0 = ema20[lastIdx];
+            const e5_1 = ema5[lastIdx - 1];
+            const e5_2 = ema5[lastIdx - 2];
+            const e20_1 = ema20[lastIdx - 1];
 
-            if (item.trend === "LONG" && latestClosed.close < latestClosed.open) {
-                if (latestClosed.low <= recentLow10 * (1 + tolerance)) {
-                    if (realTimePrice >= recentLow10 * 0.985 && realTimePrice >= latestClosed.close * 0.995) {
-                        signalType = "LONG";
-                        keyPrice = recentLow10;
+            const realTimePrice = data.current.close;
+
+            const isE5Up = e5_0 > e5_1 && e5_1 > e5_2;
+            const isE5Down = e5_0 < e5_1 && e5_1 < e5_2;
+            const isE20Up = e20_0 > e20_1;
+            const isE20Down = e20_0 < e20_1;
+
+            let signalType = null;
+
+            // === 做多逻辑：多头向上 + 收阴 + 稳站 EMA5 ===
+            if (e5_0 > e20_0 && isE5Up && isE20Up) {
+                if (c0.close < c0.open) { // 收阴线
+                    // 【极度严苛稳站】：最低价必须接近 EMA5（上方 0.2% 到下方 0.1% 之间）
+                    // 也就是绝对不能深跌穿，且收盘价必须严格在 EMA5 之上
+                    if (c0.low <= e5_0 * 1.002 && c0.low >= e5_0 * 0.999 && c0.close > e5_0) {
+                        if (realTimePrice <= c0.close * 1.005 && realTimePrice >= c0.low * 0.998) {
+                            signalType = "LONG";
+                        }
                     }
                 }
             }
-            else if (item.trend === "SHORT" && latestClosed.close > latestClosed.open) {
-                if (latestClosed.high >= recentHigh10 * (1 - tolerance)) {
-                    if (realTimePrice <= recentHigh10 * 1.015 && realTimePrice <= latestClosed.close * 1.005) {
-                        signalType = "SHORT";
-                        keyPrice = recentHigh10;
+            // === 做空逻辑：空头向下 + 收阳 + 稳站 EMA5 ===
+            else if (e5_0 < e20_0 && isE5Down && isE20Down) {
+                if (c0.close > c0.open) { // 收阳线
+                    // 【极度严苛稳站】：最高价必须接近 EMA5（下方 0.2% 到上方 0.1% 之间）
+                    // 也就是绝对不能强突破，且收盘价必须严格在 EMA5 之下
+                    if (c0.high >= e5_0 * 0.998 && c0.high <= e5_0 * 1.001 && c0.close < e5_0) {
+                        if (realTimePrice >= c0.close * 0.995 && realTimePrice <= c0.high * 1.002) {
+                            signalType = "SHORT";
+                        }
                     }
                 }
             }
 
             if (signalType) {
                 const tagClass = signalType === "LONG" ? "tag-long" : "tag-short";
-                const tagText = signalType === "LONG" ? "阴线踩底" : "阳线探顶";
-                tbody.innerHTML += `<tr><td>${item.coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(keyPrice)}</td><td style="color:#fff">${formatPrice(latestClosed.close)}</td></tr>`;
+                const tagText = signalType === "LONG" ? "稳站多头" : "稳站空头";
+                tbody.innerHTML += `<tr><td>${coin}</td><td><span class="${tagClass}">${tagText}</span></td><td style="color:#00e5ff">${formatPrice(e5_0)}</td><td style="color:#fff">${formatPrice(c0.close)}</td></tr>`;
                 count++;
             }
         }
-        await new Promise(r => setTimeout(r, 80)); 
+        await new Promise(r => setTimeout(r, 30)); 
     }
     return count;
 }
@@ -365,42 +236,35 @@ async function run15mScan() {
 async function scan15M() {
     if (isScanning) return;
     isScanning = true;
+    
     const count = await run15mScan();
     
     if (count > 0) {
         playLongAlert();
-        resetProgress(`🚨 发现 ${count} 个高胜率信号！(持续响铃中)`);
+        resetProgress(`🚨 发现 ${count} 个高胜率信号！(响铃中)`);
     } else {
-        resetProgress(`✅ 巡检完毕，暂无符合条件的新信号。`);
+        resetProgress(`✅ 巡检完毕，暂无完美形态。`);
     }
     
     isScanning = false;
-}
-
-function startCycle1D() {
-    const intervalMs = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const offset = 16 * 60 * 60 * 1000; 
-    const nextTime = Math.ceil((now - offset) / intervalMs) * intervalMs + offset + 2000;
-    timer1d = setTimeout(async () => { await scan1D(); await scan15M(); if (isRunning) startCycle1D(); }, nextTime - now);
 }
 
 function startCycle15M() {
     const intervalMs = 15 * 60 * 1000;
     const now = Date.now();
     const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000;
-    timer15m = setTimeout(async () => { fetchMarketSentiment(); await scan15M(); if (isRunning) startCycle15M(); }, nextTime - now);
+    
+    timer15m = setTimeout(async () => { 
+        await scan15M(); 
+        if (isRunning) startCycle15M(); 
+    }, nextTime - now);
 }
 
 function updateCountdowns() {
     if (!isRunning) return;
     const now = Date.now();
-    
-    const offset = 16 * 60 * 60 * 1000;
-    const diff1d = Math.max(0, (Math.ceil((now - offset) / 86400000) * 86400000 + offset + 2000) - now);
-    document.getElementById('countdown1d').innerText = `${Math.floor(diff1d/3600000).toString().padStart(2,'0')}:${Math.floor((diff1d%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff1d%60000)/1000).toString().padStart(2,'0')}`;
-    
-    const diff15m = Math.max(0, (Math.ceil(now / 900000) * 900000 + 2000) - now);
+    const next15m = Math.ceil(now / 900000) * 900000 + 2000;
+    const diff15m = Math.max(0, next15m - now);
     document.getElementById('countdown15m').innerText = `${Math.floor(diff15m/60000).toString().padStart(2,'0')}:${Math.floor((diff15m%60000)/1000).toString().padStart(2,'0')}`;
 }
 
@@ -410,7 +274,7 @@ function toggleAuto() {
 
     if (isRunning) {
         isRunning = false;
-        clearTimeout(timer1d); clearTimeout(timer15m); clearInterval(uiTimer);
+        clearTimeout(timer15m); clearInterval(uiTimer);
         if (ringInterval) clearInterval(ringInterval);
         btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
         panel.classList.remove('active'); resetProgress("自动巡航已停止。");
@@ -424,12 +288,13 @@ function toggleAuto() {
 
         isRunning = true;
         btn.innerText = "停止自动巡航"; btn.classList.add('stop');
-        panel.classList.add('active'); resetProgress("系统已启动，正在对齐收盘时间...");
-        fetchMarketSentiment(); 
-        updateCountdowns(); uiTimer = setInterval(updateCountdowns, 1000);
+        panel.classList.add('active'); resetProgress("系统已启动，正在对齐整点...");
         
-        scan1D().then(() => scan15M());
-        startCycle1D(); startCycle15M();
+        updateCountdowns(); 
+        uiTimer = setInterval(updateCountdowns, 1000);
+        
+        scan15M();
+        startCycle15M();
     }
 }
 
