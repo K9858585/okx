@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 5m 10K强排列回踩 V40</title>
+<title>OKX 5m 组合反转战法 V42</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -51,7 +51,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 5m 10K强排列回踩 V40</h1>
+    <h1>⚡ 5m 组合反转战法 V42</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -71,10 +71,10 @@
 </div>
 
 <div class="strategy-block">
-    <div class="block-title">📊 10K强排列 + 收阴精准回踩</div>
+    <div class="block-title">📊 5m 冲高回落 / 探底回升扫描池</div>
     <div class="table-container">
         <table>
-            <thead><tr><th>币种</th><th>完美度</th><th>方向</th><th>距EMA20</th><th>现价</th></tr></thead>
+            <thead><tr><th>币种</th><th>反转分</th><th>形态</th><th>影线倍数</th><th>现价</th></tr></thead>
             <tbody id="tbodyMain"><tr><td colspan="5" style="text-align:center; color:#666;">暂无信号，请启动巡航</td></tr></tbody>
         </table>
     </div>
@@ -132,12 +132,6 @@ function resetProgress(text) {
     document.getElementById('statusText').innerText = text;
     document.getElementById('statusPercent').innerText = `0%`;
     document.getElementById('progressFill').style.width = `0%`;
-}
-
-function calcEMAArr(arr, period) {
-    let ema = [], k = 2 / (period + 1), prevEma = arr[0];
-    for (let i = 0; i < arr.length; i++) { prevEma = (arr[i] - prevEma) * k + prevEma; ema.push(prevEma); }
-    return ema;
 }
 
 async function asyncPool(poolLimit, array, iteratorFn) {
@@ -200,78 +194,62 @@ async function scan5M() {
         updateProgress(completed, FIXED_COINS.length, `[极速扫描] 已完成: ${completed}/${FIXED_COINS.length}`);
 
         if (!data || data.closed.length < 25) return;
-        // 过滤24小时暴涨暴跌
         if (data.change24h > 15 || data.change24h < -15) return; 
 
         const k = data.closed;
-        const closes = k.map(x => x.close);
-        const ema20 = calcEMAArr(closes, 20);
         const lastIdx = k.length - 1;
+        
+        // 提取最近3根：k1(前前), k2(前), k3(当前)
+        const k1 = k[lastIdx - 2];
+        const k2 = k[lastIdx - 1];
+        const k3 = k[lastIdx]; 
         const realTimePrice = data.currentPrice;
 
-        // 提取最近 10 根
-        const last10 = k.slice(-10);
-        const curK = last10[9]; // 最后一根
-        const curE20 = ema20[lastIdx];
+        // 计算当前K线 k3 的实体和影线
+        const body = Math.abs(k3.close - k3.open);
+        const upperShadow = k3.high - Math.max(k3.open, k3.close);
+        const lowerShadow = Math.min(k3.open, k3.close) - k3.low;
+        const safeBody = Math.max(body, k3.open * 0.0005);
 
         let signalType = null;
-        let distToE20 = 0;
+        let score = 0;
+        let ratio = 0;
 
-        // === 1. 基础大体检：10根完整排列 ===
-        let is10LongValid = true;
-        let is10ShortValid = true;
-
-        for (let i = 0; i < 10; i++) {
-            const idx = lastIdx - 9 + i;
-            const c = last10[i];
-            
-            // 只要有大阴大阳(实体>2%)，直接淘汰
-            if (Math.abs(c.close - c.open) / c.open > 0.02) {
-                is10LongValid = false; is10ShortValid = false; break;
-            }
-            
-            // 做多体检：收盘价和最低价必须严格在 EMA20 之上
-            if (c.close <= ema20[idx] || c.low <= ema20[idx]) is10LongValid = false;
-            // 做空体检：收盘价和最高价必须严格在 EMA20 之下
-            if (c.close >= ema20[idx] || c.high >= ema20[idx]) is10ShortValid = false;
-        }
-
-        // === 2. 扣动扳机：最后一根收阴精准回踩 ===
-        if (is10LongValid) {
-            // 最后一根必须是阴线
-            if (curK.close < curK.open) {
-                // 最低价极度贴近 EMA20（在上方 0.5% 以内）且不破
-                if (curK.low >= curE20 && curK.low <= curE20 * 1.005) {
-                    // 防追单
-                    if (realTimePrice <= curK.close * 1.005) {
-                        signalType = "LONG";
-                        distToE20 = (curK.low - curE20) / curE20 * 100;
-                    }
+        // === 做空形态：冲高回落 ===
+        // 条件1：当前K线 k3 是长上影，实体偏小
+        if (upperShadow > safeBody * 2 && lowerShadow < safeBody * 0.5 && body / k3.open < 0.015) {
+            // 条件2：前一根 k2 必须是阳线（代表多头拉升中）
+            // 条件3：k2 的高点最好比 k1 高，或 k2 的收盘价比 k1 高（确保处于短期高位）
+            if (k2.close > k2.open && (k2.high > k1.high || k2.close > k1.close)) {
+                // 防追空
+                if (realTimePrice >= k3.close * 0.99) {
+                    signalType = "SHORT";
+                    ratio = upperShadow / safeBody; 
+                    score = Math.min(100, Math.round(70 + (ratio * 5)));
                 }
             }
         }
-        else if (is10ShortValid) {
-            // 最后一根必须是阳线
-            if (curK.close > curK.open) {
-                // 最高价极度贴近 EMA20 且不破
-                if (curK.high <= curE20 && curK.high >= curE20 * 0.995) {
-                    if (realTimePrice >= curK.close * 0.995) {
-                        signalType = "SHORT";
-                        distToE20 = (curE20 - curK.high) / curE20 * 100;
-                    }
+        // === 做多形态：探底回升 ===
+        // 条件1：当前K线 k3 是长下影，实体偏小
+        else if (lowerShadow > safeBody * 2 && upperShadow < safeBody * 0.5 && body / k3.open < 0.015) {
+            // 条件2：前一根 k2 必须是阴线（代表空头砸盘中）
+            // 条件3：k2 的低点比 k1 低，或 k2 的收盘价比 k1 低（确保处于短期低位）
+            if (k2.close < k2.open && (k2.low < k1.low || k2.close < k1.close)) {
+                // 防追多
+                if (realTimePrice <= k3.close * 1.01) {
+                    signalType = "LONG";
+                    ratio = lowerShadow / safeBody;
+                    score = Math.min(100, Math.round(70 + (ratio * 5)));
                 }
             }
         }
 
         if (signalType) {
-            // 精准度打分：贴得越紧分越高
-            let score = Math.max(80, Math.round(100 - (distToE20 * 40)));
-
             scanResults.push({
                 coin: coin,
                 type: signalType,
                 score: score,
-                dist: distToE20.toFixed(2) + "%",
+                ratio: ratio.toFixed(1) + "倍",
                 price: realTimePrice
             });
         }
@@ -282,13 +260,13 @@ async function scan5M() {
     scanResults.sort((a, b) => b.score - a.score);
     for (let res of scanResults) {
         const tagClass = res.type === "LONG" ? "tag-long" : "tag-short";
-        const tagText = res.type === "LONG" ? "做多" : "做空";
+        const tagText = res.type === "LONG" ? "探底回升" : "冲高回落";
         tbody.innerHTML += `
             <tr>
                 <td>${res.coin}</td>
                 <td><span class="score-badge">${res.score}分</span></td>
                 <td><span class="${tagClass}">${tagText}</span></td>
-                <td style="color:#00e5ff; font-size:12px;">+${res.dist}</td>
+                <td style="color:#ffb300; font-weight:bold;">${res.ratio}</td>
                 <td style="color:#fff">${formatPrice(res.price)}</td>
             </tr>
         `;
@@ -296,9 +274,9 @@ async function scan5M() {
 
     if (scanResults.length > 0) {
         playLongAlert();
-        resetProgress(`🚨 发现 ${scanResults.length} 个10K极致回踩信号！`);
+        resetProgress(`🚨 发现 ${scanResults.length} 个组合反转信号！`);
     } else {
-        resetProgress(`✅ 扫描完成，暂无完美信号。`);
+        resetProgress(`✅ 扫描完成，暂无完美形态。`);
     }
     isScanning = false;
 }
