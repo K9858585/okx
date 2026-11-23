@@ -1,465 +1,212 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 日线2稳+防反抽 V49 (200币版)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>欧易 5m 箱体震荡探测终端 (v301)</title>
 <style>
-    :root {
-        --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
-        --accent-blue: #00e5ff; --accent-green: #00e676; --accent-red: #ff5252; --border-color: #2d3748;
-        --accent-gold: #ffb300;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-main); padding: 16px; line-height: 1.5; padding-bottom: 40px;}
-    
-    .header { text-align: center; margin-bottom: 15px; }
-    .header h1 { font-size: 22px; color: var(--accent-blue); text-shadow: 0 0 10px rgba(0, 229, 255, 0.3); }
-
-    .timer-panel { background: linear-gradient(145deg, #1a202c, #11151f); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; margin-bottom: 15px; text-align: center; display: none;}
-    .timer-panel.active { display: block; }
-    .timer-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-bottom: 4px;}
-    .timer-row:last-child { margin-bottom: 0; }
-    .timer-label { color: var(--text-sub); }
-    .timer-value { color: var(--accent-gold); font-family: monospace; font-size: 15px; }
-
-    .master-btn { display: block; width: 100%; padding: 16px; background: linear-gradient(90deg, #00e676, #00b0ff); color: #000; font-size: 17px; font-weight: bold; border: none; border-radius: 12px; margin-bottom: 20px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.3);}
-    .master-btn.stop { background: linear-gradient(90deg, #ff5252, #d32f2f); color: #fff; box-shadow: 0 4px 15px rgba(255, 82, 82, 0.3);}
-    .master-btn:active { transform: scale(0.98); }
-
-    .status-container { background: rgba(255, 179, 0, 0.05); border: 1px solid rgba(255, 179, 0, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px; }
-    .status-box { text-align: center; font-size: 13px; font-weight: 500; color: var(--accent-gold); margin-bottom: 8px; display: flex; justify-content: space-between; }
-    .status-text { text-align: left; }
-    .status-percent { font-weight: bold; color: #fff; }
-    .progress-bar { width: 100%; height: 6px; background: #2d3748; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width 0.1s ease; }
-    
-    .strategy-block { border: 2px solid #2d3748; border-radius: 14px; padding: 12px; margin-bottom: 25px; background: #0d1219; }
-    .block-title { font-size: 16px; font-weight: bold; color: var(--accent-blue); margin-bottom: 12px; text-align: center; border-bottom: 1px dashed #2d3748; padding-bottom: 8px;}
-    
-    .table-container { width: 100%; overflow-x: auto; background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 15px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
-    th { background: #1e2532; color: var(--text-sub); padding: 12px 10px; text-align: right; border-bottom: 1px solid var(--border-color); }
-    th:first-child { text-align: left; }
-    td { padding: 12px 10px; text-align: right; border-bottom: 1px solid rgba(45, 55, 72, 0.5); }
-    td:first-child { text-align: left; font-weight: bold; color: #fff; }
-
-    .tag-long { background: rgba(0, 230, 118, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(0, 230, 118, 0.3); }
-    .tag-short { background: rgba(255, 82, 82, 0.15); color: var(--accent-red); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid rgba(255, 82, 82, 0.3); }
-    .score-badge { background: linear-gradient(90deg, #ffb300, #ff8f00); color: #000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; }
+*{box-sizing:border-box}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
+h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
+.win{background:#11161d;border:1px solid #30363d;border-radius:14px;padding:14px;margin-bottom:16px}
+.btn{display:block;width:100%;padding:14px;margin:8px 0;border-radius:10px;border:none;font-size:16px;font-weight:600;cursor:pointer;transition:opacity 0.2s}
+.btn:active{opacity:0.7}
+.b1{background:#ff9f0a;color:#000; box-shadow:0 4px 15px rgba(255,159,10,0.3)}
+.st{margin:10px 0;padding:10px 12px;background:#161b22;border-radius:8px;font-size:13px;text-align:center; display:flex; justify-content:space-between;}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;margin:8px 0; animation: pop 0.3s ease-out;}
+@keyframes pop { 0%{transform:scale(0.95);opacity:0} 100%{transform:scale(1);opacity:1} }
+.t{font-size:17px;font-weight:700; display:flex; justify-content:space-between; align-items:center;}
+.L{color:#3fb950}.S{color:#f85149}.N{color:#8b949e}.Y{color:#ff9f0a}.B{color:#58a6ff}
+.info{font-size:13px;line-height:1.75;margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:4px;}
+.info span{color:#8b949e;}
+.info b{color:#fff;}
+.sp{display:inline-block;width:14px;height:14px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes r{to{transform:rotate(360deg)}}
+.empty{color:#8b949e;font-size:13px;padding:20px;text-align:center;border:1px dashed #30363d;border-radius:10px}
+.badge{font-size:12px; padding:2px 8px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
 </style>
 </head>
 <body>
 
-<div class="header">
-    <h1>⚡ 日线2稳+防反抽 V49 (200币)</h1>
+<div class="win">
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 箱体震荡探测器</h2>
+  <button class="btn b1" id="f1">🔍 扫描当前震荡币种</button>
+  <div class="st">
+    <span id="st1">准备就绪</span>
+    <span id="percent" style="color:#ff9f0a; font-weight:bold;">0%</span>
+  </div>
 </div>
 
-<button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
-
-<div class="timer-panel" id="timerPanel">
-    <div class="timer-row"><span class="timer-label">日线重定势倒计时</span><span class="timer-value" id="countdown1d">--:--:--</span></div>
-    <div class="timer-row"><span class="timer-label">15m 进场倒计时</span><span class="timer-value" id="countdown15m">--:--</span></div>
-</div>
-
-<div class="status-container" id="statusContainer">
-    <div class="status-box">
-        <span class="status-text" id="statusText">等待启动...</span>
-        <span class="status-percent" id="statusPercent">0%</span>
-    </div>
-    <div class="progress-bar">
-        <div class="progress-fill" id="progressFill"></div>
-    </div>
-</div>
-
-<div class="strategy-block">
-    <div class="block-title">📊 日线严格发散 + 15m极值池</div>
-    <div class="table-container">
-        <table>
-            <thead><tr><th>币种</th><th>精准度</th><th>方向</th><th>日线支持</th><th>现价</th></tr></thead>
-            <tbody id="tbodyMain"><tr><td colspan="5" style="text-align:center; color:#666;">暂无信号，请启动巡航</td></tr></tbody>
-        </table>
-    </div>
+<div id="result-area">
+  <div class="win" id="list-area" style="display:none;">
+    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 策略：靠近箱底做多，靠近箱顶做空，跌破/突破箱体严格止损。</div>
+    <div id="out-cards"></div>
+  </div>
 </div>
 
 <script>
-const OKX_URL = "https://www.okx.com/api/v5/market/candles";
-const OKX_TICKER = "https://www.okx.com/api/v5/market/ticker";
-const PROXIES = ["", "https://api.codetabs.com/v1/proxy?quest=", "https://corsproxy.io/?"];
-
-// 【核心更新】：融合原有的100个，再加上你新提供的100个，总计200个。
+// 你的 100 币种专属池
 const FIXED_COINS = [
-    // --- 原 100 池 ---
-    "UP", "ZRO", "XPL", "BERA", "CRWV", "AVGO", "NIGHT", "ICP", "META", 
-    "APT", "SAMSUNG", "PENGU", "JUP", "XLM", "ZHIPU", "CRV", "TSM", "MUU", 
-    "TRX", "ONDO", "VVV", "AAOI", "PONS", "ASTER", "SHIB", "OP", "DOT", 
-    "LITE", "NBIS", "SPY", "UVXY", "ZHONGJIU", "MRVL", "TSLA", "SKDD", 
-    "AAVE", "INJ", "DRAM", "BZ", "AAPL", "SQQQ", "TAO", "STRK", "ARB", "AVAX",
-    "ANT", "BTC", "ETH", "OKB", "SOL", "DOGE", "XRP", "BCH", "DOOD", "ZEC", "SNDK", 
-    "XAU", "NVDA", "IRYS", "MMT", "PIEVERSE", "SOXL", "AKE", "PIPPIN", "SPCX", "SKHYNIX", 
-    "BTW", "MU", "HUMA", "HYPE", "CL", "PEPE", "XAG", "CAP", "PROS", 
-    "SENT", "YB", "AMD", "QQQ", "BREV", "RAVE", "INTC", "NESA", "SOXS", 
-    "PUMP", "TRUMP", "UNITREE", "NEAR", "SNXX", "PDD", "GOOGL", "KORU", "LIT", "INI", "USELESS",
-    
-    // --- 新增 100 池 ---
-    "BTC", "ETH", "SOXL", "SNDK", "ZEC", "SOL", "NVDA", "XAU", "ANT", "MMT",
-    "MU", "XRP", "SKHYNIX", "SOXS", "HYPE", "PIEVERSE", "BREV", "XAG", "KORU", "DOGE",
-    "PEPE", "SPCX", "NEAR", "PIPPIN", "SNXX", "CL", "PUMP", "SKHY", "MSTR", "UNI",
-    "QQQ", "LIT", "AKE", "WLD", "AMD", "AAOI", "ENA", "FIL", "SUI", "INTC",
-    "ZHONGJI", "NBIS", "BNB", "CRCL", "TRUMP", "PENGU", "ADA", "AAVE", "TQQQ", "LINK",
-    "GOOGL", "UNITREE", "MRVL", "BZ", "LTC", "HUMA", "INJ", "STRK", "LITE", "BCH",
-    "AVAX", "ASTER", "TSLA", "IRYS", "CRWV", "DRAM", "TAO", "ZRO", "ARB", "SAMSUNG",
-    "ZIL", "UP", "ZHIPU", "VVV", "BTW", "AAPL", "XPL", "ONDO", "TRX", "OKB",
-    "TSM", "NES", "AXTI", "NIGHT", "SPY", "UVXY", "MUU", "DGAI", "GRAM", "XLM",
-    "ICP", "SQQQ", "CXMT", "BE", "SOPH", "PROS", "EWY", "USELESS", "ZKP", "OP"
+  "BTCUSDT", "ETHUSDT", "SOXLUSDT", "SNDKUSDT", "ZECUSDT", "SOLUSDT", "NVDAUSDT", "XAUUSDT", "ANTUSDT", "MMTUSDT",
+  "MUUSDT", "XRPUSDT", "SKHYNIXUSDT", "SOXSUSDT", "HYPEUSDT", "PIEVERSEUSDT", "BREVUSDT", "XAGUSDT", "KORUUSDT", "DOGEUSDT",
+  "PEPEUSDT", "SPCXUSDT", "NEARUSDT", "PIPPINUSDT", "SNXXUSDT", "CLUSDT", "PUMPUSDT", "SKHYUSDT", "MSTRUSDT", "UNIUSDT",
+  "QQQUSDT", "LITUSDT", "AKEUSDT", "WLDUSDT", "AMDUSDT", "AAOIUSDT", "ENAUSDT", "FILUSDT", "SUIUSDT", "INTCUSDT",
+  "ZHONGJIUSDT", "NBISUSDT", "BNBUSDT", "CRCLUSDT", "TRUMPUSDT", "PENGUUSDT", "ADAUSDT", "AAVEUSDT", "TQQQUSDT", "LINKUSDT",
+  "GOOGLUSDT", "UNITREEUSDT", "MRVLUSDT", "BZUSDT", "LTCUSDT", "HUMAUSDT", "INJUSDT", "STRKUSDT", "LITEUSDT", "BCHUSDT",
+  "AVAXUSDT", "ASTERUSDT", "TSLAUSDT", "IRYSUSDT", "CRWVUSDT", "DRAMUSDT", "TAOUSDT", "ZROUSDT", "ARBUSDT", "SAMSUNGUSDT",
+  "ZILUSDT", "UPUSDT", "ZHIPUUSDT", "VVVUSDT", "BTWUSDT", "AAPLUSDT", "XPLUSDT", "ONDOUSDT", "TRXUSDT", "OKBUSDT",
+  "TSMUSDT", "NESUSDT", "AXTIUSDT", "NIGHTUSDT", "SPYUSDT", "UVXYUSDT", "MUUUSDT", "DGAIUSDT", "GRAMUSDT", "XLMUSDT",
+  "ICPUSDT", "SQQQUSDT", "CXMTUSDT", "BEUSDT", "SOPHUSDT", "PROSUSDT", "EWYUSDT", "USELESSUSDT", "ZKPUSDT", "OPUSDT"
 ];
 
-// 去重处理 (防止币种重复扫描)
-const UNIQUE_COINS = [...new Set(FIXED_COINS)];
+const PROXIES = ["", "https://api.codetabs.com/v1/proxy?quest=", "https://corsproxy.io/?"];
+const $=i=>document.getElementById(i);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(6);
 
-let isRunning = false;
-let isScanning = false; 
-let timer1d, timer15m, uiTimer;
-let audioCtx = null;
-let ringInterval = null;
-
-let cached1DCoins = [];
-
-function playLongAlert() {
-    if (!audioCtx) return;
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (ringInterval) clearInterval(ringInterval);
-    let count = 0;
-    const ring = () => {
-        if (count >= 5) { clearInterval(ringInterval); return; }
-        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-        osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-        count++;
-    };
-    ring(); ringInterval = setInterval(ring, 400);
-}
-
-function updateProgress(current, total, text) {
-    const percent = Math.round((current / total) * 100);
-    document.getElementById('statusText').innerText = text;
-    document.getElementById('statusPercent').innerText = `${percent}%`;
-    document.getElementById('progressFill').style.width = `${percent}%`;
-}
-
-function resetProgress(text) {
-    document.getElementById('statusText').innerText = text;
-    document.getElementById('statusPercent').innerText = `0%`;
-    document.getElementById('progressFill').style.width = `0%`;
-}
-
-function calcEMAArr(arr, period) {
-    let ema = [], k = 2 / (period + 1), prevEma = arr[0];
-    for (let i = 0; i < arr.length; i++) { prevEma = (arr[i] - prevEma) * k + prevEma; ema.push(prevEma); }
-    return ema;
-}
-
-async function asyncPool(poolLimit, array, iteratorFn) {
-    const ret = [], executing = new Set();
-    for (const item of array) {
-        const p = Promise.resolve().then(() => iteratorFn(item));
-        ret.push(p); executing.add(p);
-        const clean = () => executing.delete(p);
-        p.then(clean).catch(clean);
-        if (executing.size >= poolLimit) await Promise.race(executing);
+async function okx(path, retries=2){
+  const targetUrl = 'https://www.okx.com' + path;
+  for(let i=0; i<=retries; i++){
+    const proxy = PROXIES[i % PROXIES.length];
+    const fetchUrl = proxy ? proxy + encodeURIComponent(targetUrl) : targetUrl;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    try{
+      const r = await fetch(fetchUrl, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if(r.status === 429 || r.status >= 500) continue;
+      if(!r.ok) continue;
+      const j = await r.json();
+      if(j.code !== '0') return {err:`API:${j.msg}`};
+      return {data:j.data};
+    }catch(e){
+      clearTimeout(timer);
+      if(i === retries) return {err:`网络失败`};
+      await sleep(300);
     }
-    return Promise.all(ret);
+  }
 }
 
-// 【核心优化】：加入了双重代理请求重试，防止200个币引发限流报错
-async function fetchWithRetry(url, retries=2) {
-    for(let i=0; i<=retries; i++) {
-        const proxy = PROXIES[i % PROXIES.length];
-        const fetchUrl = proxy ? proxy + encodeURIComponent(url) : url;
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 6000);
-        try {
-            const res = await fetch(fetchUrl, { signal: ctrl.signal });
-            clearTimeout(timer);
-            if(!res.ok) continue;
-            const json = await res.json();
-            if(json.code === "0") return json;
-        } catch(e) {
-            clearTimeout(timer);
-        }
-    }
-    return null;
+function parseK(d){
+  const o=[],h=[],l=[],c=[];
+  const closedData = d.filter(x => x[8] === '1');
+  const data=[...closedData].reverse();
+  for(const x of data){
+    o.push(parseFloat(x[1])); h.push(parseFloat(x[2])); l.push(parseFloat(x[3])); c.push(parseFloat(x[4]));
+  }
+  return{o,h,l,c};
 }
 
-async function fetchKlines(coin, bar) {
-    const sym = `${coin}-USDT-SWAP`;
-    const json = await fetchWithRetry(`${OKX_URL}?instId=${sym}&bar=${bar}&limit=50`);
-    if (json && json.data && json.data.length > 0) {
-        const all = json.data.reverse();
-        return all.filter(d => d[8] === '1').map(d => ({ 
-            open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) 
-        }));
-    }
-    return null;
-}
+async function runScan() {
+  $('st1').innerHTML = '<span class="sp"></span>并发拉取 5m 数据中...';
+  $('list-area').style.display = 'none';
+  
+  const targetInstIds = FIXED_COINS.map(c => c.replace('USDT', '-USDT-SWAP'));
+  
+  let results = [];
+  let done = 0;
 
-async function fetchTicker(coin) {
-    const json = await fetchWithRetry(`${OKX_TICKER}?instId=${coin}-USDT-SWAP`);
-    if (json && json.data && json.data.length > 0) {
-        const open24h = parseFloat(json.data[0].open24h);
-        const last = parseFloat(json.data[0].last);
-        return { last, change24h: ((last - open24h) / open24h) * 100 };
-    }
-    return null;
-}
-
-// ================= 第一层：1D 大趋势定势 =================
-async function scan1D() {
-    cached1DCoins = [];
-    let completed = 0;
-
-    // 并发池提高到 12 个
-    await asyncPool(12, UNIQUE_COINS, async (coin) => {
-        const k = await fetchKlines(coin, "1D");
-        completed++;
-        updateProgress(completed, UNIQUE_COINS.length, `[1D定势] 扫描: ${completed}/${UNIQUE_COINS.length}`);
-
-        if (k && k.length >= 30) {
-            const closes = k.map(x => x.close);
-            const ema5 = calcEMAArr(closes, 5);
-            const ema20 = calcEMAArr(closes, 20);
-            const lastIdx = k.length - 1;
-            
-            const e5 = ema5[lastIdx], e20 = ema20[lastIdx];
-            const e5_prev = ema5[lastIdx-1], e20_prev = ema20[lastIdx-1];
-            const e5_prev2 = ema5[lastIdx-2];
-
-            // 1. 核心发散（一票否决）
-            const isE5Up = e5 > e5_prev && e5_prev > e5_prev2;
-            const isE5Down = e5 < e5_prev && e5_prev < e5_prev2;
-            const isE20Up = e20 > e20_prev;
-            const isE20Down = e20 < e20_prev;
-
-            let trendType = null;
-
-            // === 做多严苛判定 ===
-            if (e5 > e20 && isE5Up && isE20Up) {
-                // 防连续转阴：最近 2 根日线中，不能有阴线
-                const isRecent2Green = k[lastIdx].close > k[lastIdx].open && k[lastIdx-1].close > k[lastIdx-1].open;
-                
-                // 斜率判定 & 偏离度
-                const slope = (e5 - e5_prev) / e5_prev;
-                const bias = (closes[lastIdx] - e20) / e20;
-                
-                if (isRecent2Green && slope > 0.002 && bias < 0.08) {
-                    let stable2 = true;
-                    for(let i=1; i<=2; i++) {
-                        const c = k[lastIdx - 2 + i];
-                        const curE5 = ema5[lastIdx - 2 + i];
-                        const curE20 = ema20[lastIdx - 2 + i];
-                        if (c.close <= curE5 || c.low <= curE5 || c.close <= curE20 || c.low <= curE20) stable2 = false;
-                    }
-                    if (stable2) trendType = "LONG";
-                }
-            } 
-            // === 做空严苛判定 ===
-            else if (e5 < e20 && isE5Down && isE20Down) {
-                // 防连续转阳：最近 2 根日线中，不能有阳线
-                const isRecent2Red = k[lastIdx].close < k[lastIdx].open && k[lastIdx-1].close < k[lastIdx-1].open;
-                
-                const slope = (e5_prev - e5) / e5_prev;
-                const bias = (e20 - closes[lastIdx]) / e20;
-
-                if (isRecent2Red && slope > 0.002 && bias < 0.08) {
-                    let stable2 = true;
-                    for(let i=1; i<=2; i++) {
-                        const c = k[lastIdx - 2 + i];
-                        const curE5 = ema5[lastIdx - 2 + i];
-                        const curE20 = ema20[lastIdx - 2 + i];
-                        if (c.close >= curE5 || c.high >= curE5 || c.close >= curE20 || c.high >= curE20) stable2 = false;
-                    }
-                    if (stable2) trendType = "SHORT";
-                }
-            }
-
-            if (trendType) {
-                cached1DCoins.push({ coin, type: trendType });
-            }
-        }
-    });
+  // 使用 Promise.all 瞬间并发请求
+  const promises = targetInstIds.map(async (instId) => {
+    // 拉取 45 根 5m K 线（剔除未收盘的，足够取最近 40 根）
+    const kr = await okx(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=45`);
+    done++;
+    $('percent').innerText = `${Math.round((done/100)*100)}%`;
     
-    resetProgress(`✅ 日线定势完成，锁定 ${cached1DCoins.length} 个趋势币。`);
-}
+    if (kr.err || !kr.data || kr.data.length < 40) return;
 
-// ================= 第二层：15m 极值找入场 =================
-async function scan15M() {
-    if (isScanning) return;
-    isScanning = true;
+    const kp = parseK(kr.data);
+    const { c, h, l } = kp;
     
-    const tbody = document.getElementById('tbodyMain');
-    tbody.innerHTML = "";
-    let count = 0;
+    // 取最近 40 根
+    const recent40 = { c: c.slice(-40), h: h.slice(-40), l: l.slice(-40) };
+    const curPrice = recent40.c[recent40.c.length - 1];
     
-    if (cached1DCoins.length === 0) {
-        resetProgress("ℹ️ 暂无日线趋势合格的币，跳过 15m 扫描。");
-        isScanning = false;
-        return;
+    const maxH = Math.max(...recent40.h);
+    const minL = Math.min(...recent40.l);
+    
+    // 1. 振幅过滤 (上下不破位, 且振幅在合理范围)
+    const amp = (maxH - minL) / minL * 100;
+    if (amp < 0.5 || amp > 3.5) return; // 振幅太小是死水，太大是趋势
+
+    // 2. 箱体中间位过滤：价格不能卡在正中间（因为没法做盈亏比）
+    const boxPos = (curPrice - minL) / (maxH - minL); // 0是底部，1是顶部
+    if (boxPos > 0.2 && boxPos < 0.8) return; // 价格在中间，盈亏比极差，不推荐
+
+    // 3. 触顶/触底次数统计（确保是真的在震荡，而不是单边阴跌后的横盘）
+    let touchTop = 0, touchBottom = 0;
+    for(let i=0; i<40; i++) {
+        if(recent40.h[i] >= maxH * 0.998) touchTop++;
+        if(recent40.l[i] <= minL * 1.002) touchBottom++;
     }
+    
+    // 必须上下都至少碰到过 2 次，才叫标准箱体
+    if(touchTop < 2 || touchBottom < 2) return;
 
-    resetProgress(`[15m极值] 正在分析 ${cached1DCoins.length} 个候选币...`);
-    let completed = 0;
-    let results = [];
+    const base = instId.split('-')[0];
+    
+    // 生成推荐策略
+    let signal = '';
+    let stopLoss = 0;
+    let tp = 0;
 
-    await asyncPool(12, cached1DCoins, async (item) => {
-        const [k, ticker] = await Promise.all([
-            fetchKlines(item.coin, "15m"),
-            fetchTicker(item.coin)
-        ]);
-        completed++;
-        updateProgress(completed, cached1DCoins.length, `[15m极值] 扫描: ${completed}/${cached1DCoins.length}`);
-
-        if (!k || k.length < 15 || !ticker) return;
-        
-        if (ticker.change24h > 15 || ticker.change24h < -15) return;
-
-        const last15 = k.slice(-15);
-        const lastK = last15[14]; 
-        const realPrice = ticker.last;
-
-        let signalType = null;
-        let precision = 0;
-
-        if (item.type === "LONG") {
-            const minLow = Math.min(...last15.map(x => x.low));
-            if (lastK.low <= minLow * 1.001) {
-                if (realPrice <= lastK.close * 1.01) {
-                    signalType = "LONG";
-                    precision = Math.round(100 - (Math.abs(lastK.low - minLow) / minLow * 10000));
-                }
-            }
-        } else if (item.type === "SHORT") {
-            const maxHigh = Math.max(...last15.map(x => x.high));
-            if (lastK.high >= maxHigh * 0.999) {
-                if (realPrice >= lastK.close * 0.99) {
-                    signalType = "SHORT";
-                    precision = Math.round(100 - (Math.abs(maxHigh - lastK.high) / maxHigh * 10000));
-                }
-            }
-        }
-
-        if (signalType) {
-            results.push({
-                coin: item.coin,
-                type: signalType,
-                score: Math.min(100, Math.max(80, precision)),
-                price: realPrice,
-                support: item.type === "LONG" ? "1D多头" : "1D空头"
-            });
-        }
-    });
-
-    results.sort((a, b) => b.score - a.score);
-    for (let res of results) {
-        const tagClass = res.type === "LONG" ? "tag-long" : "tag-short";
-        const tagText = res.type === "LONG" ? "极值做多" : "极值做空";
-        tbody.innerHTML += `
-            <tr>
-                <td>${res.coin}</td>
-                <td><span class="score-badge">${res.score}分</span></td>
-                <td><span class="${tagClass}">${tagText}</span></td>
-                <td style="color:#aaa; font-size:11px;">${res.support}</td>
-                <td style="color:#fff">${formatPrice(res.price)}</td>
-            </tr>
-        `;
-        count++;
-    }
-
-    if (count > 0) {
-        playLongAlert();
-        resetProgress(`🚨 发现 ${count} 个日线+15m极值共振信号！`);
+    if (boxPos <= 0.2) {
+      // 贴近箱底 -> 做多
+      signal = 'LONG';
+      stopLoss = minL * 0.995; // 跌破箱底 0.5% 止损
+      tp = maxH; // 目标拿到箱顶
     } else {
-        resetProgress(`✅ 15m 扫描完成，暂无信号。`);
+      // 贴近箱顶 -> 做空
+      signal = 'SHORT';
+      stopLoss = maxH * 1.005; // 突破箱顶 0.5% 止损
+      tp = minL; // 目标拿到箱底
     }
-    
-    isScanning = false;
+
+    results.push({
+      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, boxPos
+    });
+  });
+
+  await Promise.all(promises);
+  
+  // 按振幅从小到大排序，优先推荐震荡最明显的
+  results.sort((a, b) => a.amp - b.amp);
+
+  if (results.length > 0) {
+    let html = '';
+    results.forEach(x => {
+      const isLong = x.signal === 'LONG';
+      const color = isLong ? '#3fb950' : '#f85149';
+      const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
+      
+      html += `
+        <div class="card">
+          <div class="t">
+            <span>${x.base}</span>
+            <span class="badge" style="color:${color}">${dirTxt}</span>
+          </div>
+          <div class="info">
+            <span>现价:</span> <b>${px(x.curPrice)}</b>
+            <span>振幅:</span> <b>${x.amp.toFixed(2)}%</b>
+            <span>箱顶(压力):</span> <b class="S">${px(x.maxH)}</b>
+            <span>箱底(支撑):</span> <b class="L">${px(x.minL)}</b>
+            <span>建议止损:</span> <b class="Y">${px(x.stopLoss)}</b>
+            <span>建议止盈:</span> <b class="B">${px(x.tp)}</b>
+          </div>
+        </div>
+      `;
+    });
+    $('out-cards').innerHTML = html;
+    $('st1').innerText = `✅ 发现 ${results.length} 个标准震荡箱体`;
+    $('list-area').style.display = 'block';
+  } else {
+    $('st1').innerText = `✅ 扫描完毕，暂无完美震荡箱体`;
+    $('out-cards').innerHTML = `<div class="empty">最近 40 根 5m 线中，没有找到上下边界清晰、且价格卡在边缘的币种。</div>`;
+    $('list-area').style.display = 'block';
+  }
 }
 
-// ================= 定时器 =================
-function startCycle1D() {
-    const intervalMs = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const offset = 16 * 60 * 60 * 1000; 
-    const nextTime = Math.ceil((now - offset) / intervalMs) * intervalMs + offset + 2000;
-    
-    timer1d = setTimeout(async () => { 
-        await scan1D(); 
-        await scan15M(); 
-        if (isRunning) startCycle1D(); 
-    }, nextTime - now);
-}
-
-function startCycle15M() {
-    const intervalMs = 15 * 60 * 1000;
-    const now = Date.now();
-    const nextTime = Math.ceil(now / intervalMs) * intervalMs + 2000; 
-    
-    timer15m = setTimeout(async () => { 
-        await scan15M(); 
-        if (isRunning) startCycle15M(); 
-    }, nextTime - now);
-}
-
-function updateCountdowns() {
-    if (!isRunning) return;
-    const now = Date.now();
-    
-    const offset = 16 * 60 * 60 * 1000;
-    const diff1d = Math.max(0, (Math.ceil((now - offset) / 86400000) * 86400000 + offset + 2000) - now);
-    document.getElementById('countdown1d').innerText = `${Math.floor(diff1d/3600000).toString().padStart(2,'0')}:${Math.floor((diff1d%3600000)/60000).toString().padStart(2,'0')}:${Math.floor((diff1d%60000)/1000).toString().padStart(2,'0')}`;
-
-    const next15m = Math.ceil(now / 900000) * 900000 + 2000;
-    const diff15m = Math.max(0, next15m - now);
-    document.getElementById('countdown15m').innerText = `${Math.floor(diff15m/60000).toString().padStart(2,'0')}:${Math.floor((diff15m%60000)/1000).toString().padStart(2,'0')}`;
-}
-
-async function toggleAuto() {
-    const btn = document.getElementById('masterBtn');
-    const panel = document.getElementById('timerPanel');
-
-    if (isRunning) {
-        isRunning = false;
-        clearTimeout(timer1d); clearTimeout(timer15m); clearInterval(uiTimer);
-        if (ringInterval) clearInterval(ringInterval);
-        btn.innerText = "启动自动巡航"; btn.classList.remove('stop');
-        panel.classList.remove('active'); resetProgress("自动巡航已停止。");
-    } else {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-
-        isRunning = true;
-        btn.innerText = "停止自动巡航"; btn.classList.add('stop');
-        panel.classList.add('active'); resetProgress("系统已启动，正在拉取 1D 趋势...");
-        
-        updateCountdowns(); 
-        uiTimer = setInterval(updateCountdowns, 1000);
-        
-        await scan1D();
-        await scan15M();
-        
-        startCycle1D();
-        startCycle15M();
-    }
-}
-
-function formatPrice(price) {
-    if (price >= 100) return price.toFixed(2);
-    if (price >= 1) return price.toFixed(4);
-    if (price >= 0.01) return price.toFixed(5);
-    return price.toFixed(6);
-}
+$('f1').onclick = runScan;
 </script>
 </body>
 </html>
