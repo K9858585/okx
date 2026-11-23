@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 5m 箱体震荡探测 (1小时冷却版)</title>
+<title>欧易 5m 软箱体探测 (最强单发版)</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -15,26 +15,26 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .b2{background:#da3633;color:#fff}
 .b3{background:#238636;color:#fff}
 .st{margin:10px 0;padding:10px 12px;background:#161b22;border-radius:8px;font-size:13px;text-align:center; display:flex; justify-content:space-between; align-items:center;}
-.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;margin:8px 0; animation: pop 0.3s ease-out; position:relative;}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px;margin:8px 0; animation: pop 0.3s ease-out; position:relative;}
 @keyframes pop { 0%{transform:scale(0.95);opacity:0} 100%{transform:scale(1);opacity:1} }
-.t{font-size:17px;font-weight:700; display:flex; justify-content:space-between; align-items:center;}
+.t{font-size:18px;font-weight:700; display:flex; justify-content:space-between; align-items:center;}
 .L{color:#3fb950}.S{color:#f85149}.N{color:#8b949e}.Y{color:#ff9f0a}.B{color:#58a6ff}
-.info{font-size:13px;line-height:1.75;margin-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:4px;}
+.info{font-size:14px;line-height:1.8;margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:6px;}
 .info span{color:#8b949e;}
 .info b{color:#fff;}
 .sp{display:inline-block;width:14px;height:14px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes r{to{transform:rotate(360deg)}}
 .empty{color:#8b949e;font-size:13px;padding:20px;text-align:center;border:1px dashed #30363d;border-radius:10px}
-.badge{font-size:12px; padding:2px 8px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
+.badge{font-size:13px; padding:3px 8px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
 .timer{color:#79c0ff; font-weight:bold; font-family:monospace;}
-.rank-badge { position: absolute; top: -8px; right: 12px; background: #ff9f0a; color: #000; font-weight: bold; font-size: 12px; padding: 2px 8px; border-radius: 10px; box-shadow: 0 2px 5px rgba(255,159,10,0.5); }
+.rank-badge { position: absolute; top: -10px; right: 14px; background: #ff9f0a; color: #000; font-weight: bold; font-size: 13px; padding: 2px 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(255,159,10,0.5); }
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 箱体震荡探测 (防重复)</h2>
-  <button class="btn b1" id="f1">🔍 扫描最佳盈亏比箱体</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 软箱体探测器 (最强单发)</h2>
+  <button class="btn b1" id="f1">🔍 扫描全市场最强箱体</button>
   <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
     <span id="st1">准备就绪 (请确保网络直连)</span>
@@ -50,7 +50,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 
 <div id="result-area">
   <div class="win" id="list-area" style="display:none;">
-    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 同一币种 1 小时内仅推荐 1 次。排第一的为最佳盈亏比入场点。</div>
+    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 每次只推荐全市场得分最高、盈亏比最好的一只币。</div>
     <div id="out-cards"></div>
   </div>
 </div>
@@ -75,23 +75,21 @@ let audioCtx = null;
 let autoTimer = null;
 let isScanning = false;
 
-// 获取本地缓存的推荐历史
+// 1小时冷却缓存
 function getCache() {
-    const raw = localStorage.getItem('okx_box_recommend_cache');
+    const raw = localStorage.getItem('okx_box_recommend_cache_v3');
     return raw ? JSON.parse(raw) : {};
 }
-// 更新缓存
 function updateCache(coinName) {
     const cache = getCache();
     cache[coinName] = Date.now();
-    localStorage.setItem('okx_box_recommend_cache', JSON.stringify(cache));
+    localStorage.setItem('okx_box_recommend_cache_v3', JSON.stringify(cache));
 }
-// 检查是否在 1 小时内（3600000 毫秒）
 function isCooldown(coinName) {
     const cache = getCache();
     const lastTime = cache[coinName];
     if (!lastTime) return false;
-    return (Date.now() - lastTime) < 3600000; // 1 小时
+    return (Date.now() - lastTime) < 3600000; 
 }
 
 function playAlert(){
@@ -136,7 +134,7 @@ async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>并发拉取 60 根 5m 数据中...';
+  $('st1').innerHTML = '<span class="sp"></span>全市场寻找最强王者箱体...';
   $('err-msg').style.display = 'none';
   $('list-area').style.display = 'none';
   
@@ -159,11 +157,17 @@ async function runScan() {
     const kp = parseK(kr.data);
     const { c, h, l } = kp;
     
-    const recent60 = { c: c.slice(-60), h: h.slice(-60), l: l.slice(-60) };
-    const curPrice = recent60.c[recent60.c.length - 1];
+    const recent60H = h.slice(-60);
+    const recent60L = l.slice(-60);
+    const recent60C = c.slice(-60);
+    const curPrice = recent60C[recent60C.length - 1];
     
-    const maxH = Math.max(...recent60.h);
-    const minL = Math.min(...recent60.l);
+    // === 软箱体极值计算 ===
+    let sortH = [...recent60H].sort((a, b) => b - a);
+    let maxH = sortH.slice(2, 7).reduce((a, b) => a + b, 0) / 5; // 剔除前2个，取5个均价
+
+    let sortL = [...recent60L].sort((a, b) => a - b);
+    let minL = sortL.slice(2, 7).reduce((a, b) => a + b, 0) / 5;
     
     const amp = (maxH - minL) / minL * 100;
     if (amp < 0.3 || amp > 5.0) return; 
@@ -173,12 +177,12 @@ async function runScan() {
 
     let touchTop = 0, touchBottom = 0;
     for(let i=0; i<60; i++) {
-        if(recent60.h[i] >= maxH * 0.998) touchTop++;
-        if(recent60.l[i] <= minL * 1.002) touchBottom++;
+        if(recent60H[i] >= maxH * 0.998) touchTop++;
+        if(recent60L[i] <= minL * 1.002) touchBottom++;
     }
     if(touchTop < 1 || touchBottom < 1) return;
 
-    // ================= 核心打分体系 =================
+    // ================= 打分体系 =================
     let scoreHardness = 0;
     scoreHardness += Math.min(20, (touchTop + touchBottom) * 4);
     if (amp >= 0.5 && amp <= 2.0) scoreHardness += 20;
@@ -196,15 +200,9 @@ async function runScan() {
     if (totalScore < 70) return; 
 
     const base = instId.split('-')[0];
+    if (isCooldown(base)) return; // 1小时内推过，直接淘汰
 
-    // === 【核心新增】：检查冷却时间 ===
-    if (isCooldown(base)) {
-        return; // 1小时内推荐过，直接抛弃
-    }
-
-    let signal = '';
-    let stopLoss = 0;
-    let tp = 0;
+    let signal = '', stopLoss = 0, tp = 0;
 
     if (boxPos <= 0.35) {
       signal = 'LONG';
@@ -220,7 +218,7 @@ async function runScan() {
     const reward = Math.abs(tp - curPrice);
     const rr = (reward / risk).toFixed(1);
 
-    // 记录到缓存中
+    // 记录到缓存
     updateCache(base);
 
     results.push({
@@ -237,50 +235,48 @@ async function runScan() {
       return;
   }
 
+  // 按分数从高到低排序
   results.sort((a, b) => b.totalScore - a.totalScore);
 
+  // === 【核心更新】：只拿排名第一的那一个 ===
   if (results.length > 0) {
-    let html = '';
-    results.forEach((x, index) => {
-      const isLong = x.signal === 'LONG';
-      const color = isLong ? '#3fb950' : '#f85149';
-      const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
-      const scoreColor = x.totalScore >= 90 ? '#3fb950' : '#ff9f0a';
-      
-      let rankHtml = '';
-      if(index === 0) rankHtml = `<div class="rank-badge">🏆 最佳盈亏比</div>`;
-      else if(index === 1) rankHtml = `<div class="rank-badge" style="background:#c0c0c0;">🥈 亚军</div>`;
-      else if(index === 2) rankHtml = `<div class="rank-badge" style="background:#cd7f32;">🥉 季军</div>`;
+    const best = results[0]; 
+    
+    const isLong = best.signal === 'LONG';
+    const color = isLong ? '#3fb950' : '#f85149';
+    const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
+    const scoreColor = best.totalScore >= 90 ? '#3fb950' : '#ff9f0a';
 
-      html += `
-        <div class="card">
-          ${rankHtml}
-          <div class="t" style="margin-top:5px;">
-            <span>${x.base} <span class="badge" style="border-color:${scoreColor}; color:${scoreColor}">${x.totalScore}分</span></span>
-            <span class="badge" style="color:${color}">${dirTxt}</span>
-          </div>
-          <div class="info">
-            <span>现价:</span> <b>${px(x.curPrice)}</b>
-            <span>预估盈亏比:</span> <b class="L">1:${x.rr}</b>
-            <span>箱顶(压):</span> <b class="S">${px(x.maxH)}</b>
-            <span>箱底(撑):</span> <b class="L">${px(x.minL)}</b>
-            <span>建议止损:</span> <b class="Y">${px(x.stopLoss)}</b>
-            <span>建议止盈:</span> <b class="B">${px(x.tp)}</b>
-            <span>触顶次数:</span> <b>${x.touchTop}次</b>
-            <span>触底次数:</span> <b>${x.touchBottom}次</b>
-          </div>
+    let html = `
+      <div class="card">
+        <div class="rank-badge">🏆 全市场最强</div>
+        <div class="t" style="margin-top:5px;">
+          <span>${best.base} <span class="badge" style="border-color:${scoreColor}; color:${scoreColor}">${best.totalScore}分</span></span>
+          <span class="badge" style="color:${color}">${dirTxt}</span>
         </div>
-      `;
-    });
+        <div class="info">
+          <span>现价:</span> <b>${px(best.curPrice)}</b>
+          <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
+          <span>综合箱顶(压):</span> <b class="S">${px(best.maxH)}</b>
+          <span>综合箱底(撑):</span> <b class="L">${px(best.minL)}</b>
+          <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
+          <span>建议止盈:</span> <b class="B">${px(best.tp)}</b>
+          <span>触顶次数:</span> <b>${best.touchTop}次</b>
+          <span>触底次数:</span> <b>${best.touchBottom}次</b>
+        </div>
+      </div>
+    `;
+    
     $('out-cards').innerHTML = html;
-    $('st1').innerText = `✅ 发现 ${results.length} 个高分新箱体`;
+    $('st1').innerText = `✅ 锁定最强王者：${best.base}`;
     $('list-area').style.display = 'block';
     
-    if(results[0].totalScore >= 90) playAlert();
+    // 响铃提示
+    playAlert();
     
   } else {
-    $('st1').innerText = `✅ 扫描完毕，暂无新箱体`;
-    $('out-cards').innerHTML = `<div class="empty">符合标准的高分箱体已在1小时内推荐过，或当前全市场无完美横盘。</div>`;
+    $('st1').innerText = `✅ 扫描完毕，暂无绝佳箱体`;
+    $('out-cards').innerHTML = `<div class="empty">当前全市场都在走单边趋势，或符合标准的箱体已在1小时内推荐过。耐心等待。</div>`;
     $('list-area').style.display = 'block';
   }
 }
