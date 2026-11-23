@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 5m 真·密集区箱体探测 (v310)</title>
+<title>欧易 15m 完美箱体探测 (v311)</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -33,9 +33,9 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 密集区箱体探测 (剔除启动线)</h2>
-  <button class="btn b1" id="f1">🔍 扫描全市场真横盘</button>
-  <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 15m 完美箱体 (10K极值)</h2>
+  <button class="btn b1" id="f1">🔍 扫描全市场完美箱体</button>
+  <button class="btn b3" id="f_auto">⏱️ 开启 15m 自动巡航</button>
   <div class="st">
     <span id="st1">准备就绪 (请确保网络直连)</span>
     <span id="percent" style="color:#ff9f0a; font-weight:bold;">0%</span>
@@ -50,7 +50,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 
 <div id="result-area">
   <div class="win" id="list-area" style="display:none;">
-    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 已剔除前期暴涨暴跌的极值K线。只锁定当前真实交易密集区。</div>
+    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 已剔除假横盘与大阴大阳。只保留最近 10 根完美震荡的箱体。</div>
     <div id="out-cards"></div>
   </div>
 </div>
@@ -76,19 +76,19 @@ let autoTimer = null;
 let isScanning = false;
 
 function getCache() {
-    const raw = localStorage.getItem('okx_box_recommend_cache_v5');
+    const raw = localStorage.getItem('okx_box_15m_cache');
     return raw ? JSON.parse(raw) : {};
 }
 function updateCache(coinName) {
     const cache = getCache();
     cache[coinName] = Date.now();
-    localStorage.setItem('okx_box_recommend_cache_v5', JSON.stringify(cache));
+    localStorage.setItem('okx_box_15m_cache', JSON.stringify(cache));
 }
 function isCooldown(coinName) {
     const cache = getCache();
     const lastTime = cache[coinName];
     if (!lastTime) return false;
-    return (Date.now() - lastTime) < 3600000; 
+    return (Date.now() - lastTime) < 3600000; // 冷却1小时
 }
 
 function playAlert(){
@@ -133,7 +133,7 @@ async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>锁定当前交易密集区中...';
+  $('st1').innerHTML = '<span class="sp"></span>扫描 15m 完美箱体中...';
   $('err-msg').style.display = 'none';
   $('list-area').style.display = 'none';
   
@@ -145,81 +145,86 @@ async function runScan() {
   let rejectedCount = 0;
 
   const promises = targetInstIds.map(async (instId) => {
-    const kr = await fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=65`);
+    // 15m 周期，抓 20 根
+    const kr = await fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=15m&limit=20`);
     done++;
-    $('percent').innerText = `${Math.round((done/100)*100)}%`;
+    $('percent').innerText = `${Math.round((done/FIXED_COINS.length)*100)}%`;
     
-    if (kr.err || !kr.data || kr.data.length < 60) {
+    if (kr.err || !kr.data || kr.data.length < 15) {
         failCount++;
         return;
     }
 
     const kp = parseK(kr.data);
-    const { c, h, l } = kp;
+    const { o, h, l, c } = kp;
     
-    const recent60H = h.slice(-60);
-    const recent60L = l.slice(-60);
-    const recent60C = c.slice(-60);
-    const curPrice = recent60C[recent60C.length - 1];
+    // 截取最近 10 根
+    const r10O = o.slice(-10);
+    const r10H = h.slice(-10);
+    const r10L = l.slice(-10);
+    const r10C = c.slice(-10);
+    const curPrice = r10C[r10C.length - 1];
 
-    // === 核心算法：只提取当前价格上下的密集区 ===
-    // 如果某根 K 线的低点，比现价低了超过 2.5%，说明那是之前的暴跌/暴涨，直接剔除
-    let validH = [];
-    let validL = [];
-    for(let i=0; i<60; i++) {
-        if (recent60L[i] > curPrice * 0.975 && recent60H[i] < curPrice * 1.025) {
-            validH.push(recent60H[i]);
-            validL.push(recent60L[i]);
+    // 1. 剔除包含大阴大阳的“假横盘”
+    let hasBigCandle = false;
+    for(let i=0; i<10; i++) {
+        const body = Math.abs(r10C[i] - r10O[i]) / r10O[i];
+        if (body > 0.015) { // 实体振幅超过 1.5% 淘汰
+            hasBigCandle = true; break;
         }
     }
+    if (hasBigCandle) { rejectedCount++; return; }
 
-    // 如果有效 K 线不足 15 根，说明它要么是单边，要么是刚启动，没有箱体可言
-    if (validH.length < 15) { rejectedCount++; return; }
-
-    // 提取真实的箱顶和箱底 (取有效数据的极值均价)
-    let sortH = [...validH].sort((a, b) => b - a);
-    let maxH = sortH.slice(0, 5).reduce((a, b) => a + b, 0) / 5; 
-
-    let sortL = [...validL].sort((a, b) => a - b);
-    let minL = sortL.slice(0, 5).reduce((a, b) => a + b, 0) / 5;
+    // 2. 计算箱顶与箱底
+    const maxH = Math.max(...r10H);
+    const minL = Math.min(...r10L);
     
+    // 振幅判定 (0.5% ~ 2.5% 之间才算完美密集)
     const amp = (maxH - minL) / minL * 100;
-    if (amp < 0.3 || amp > 3.0) { rejectedCount++; return; } // 真密集区振幅不能太大
+    if (amp < 0.5 || amp > 2.5) { rejectedCount++; return; }
 
+    // 3. 现价必须死死贴在边缘 (15% 空间内)
     const boxPos = (curPrice - minL) / (maxH - minL); 
-    // 因为算的是密集区，如果现价在中间，说明是假震荡，淘汰
-    if (boxPos > 0.35 && boxPos < 0.65) { rejectedCount++; return; }
+    if (boxPos > 0.15 && boxPos < 0.85) { rejectedCount++; return; }
 
+    // 4. 触顶与触底次数 (允许 0.1% 容差)
     let touchTop = 0, touchBottom = 0;
-    for(let i=0; i<validH.length; i++) {
-        if(validH[i] >= maxH * 0.998) touchTop++;
-        if(validL[i] <= minL * 1.002) touchBottom++;
+    for(let i=0; i<10; i++) {
+        if(r10H[i] >= maxH * 0.999) touchTop++;
+        if(r10L[i] <= minL * 1.001) touchBottom++;
     }
+    
+    // 10根里，至少要触碰各 2 次，证明支撑阻力有效
     if(touchTop < 2 || touchBottom < 2) { rejectedCount++; return; }
 
-    // ================= 打分体系 =================
-    let scoreHardness = 0;
-    scoreHardness += Math.min(20, (touchTop + touchBottom) * 4);
-    if (amp >= 0.5 && amp <= 2.0) scoreHardness += 20;
-    else if (amp > 2.0 && amp <= 3.0) scoreHardness += 10;
+    // ================= 打分体系 (满分100) =================
+    // A. 触碰次数 (20分)
+    let scoreHardness = Math.min(20, (touchTop + touchBottom) * 4);
+    
+    // B. 箱体紧凑度 (20分)：振幅在 1.0% ~ 1.5% 最完美
+    if (amp >= 1.0 && amp <= 1.5) scoreHardness += 20;
+    else if (amp >= 0.5 && amp < 1.0) scoreHardness += 15;
+    else if (amp > 1.5 && amp <= 2.0) scoreHardness += 10;
+    else scoreHardness += 5;
 
+    // C. 极限位置 (60分)
     let scoreRR = 0; 
-    if (boxPos <= 0.1) scoreRR = 60; 
-    else if (boxPos <= 0.2) scoreRR = 50;
-    else if (boxPos <= 0.35) scoreRR = 40;
-    else if (boxPos >= 0.9) scoreRR = 60; 
-    else if (boxPos >= 0.8) scoreRR = 50;
-    else if (boxPos >= 0.65) scoreRR = 40;
+    if (boxPos <= 0.05) scoreRR = 60; 
+    else if (boxPos <= 0.1) scoreRR = 50;
+    else if (boxPos <= 0.15) scoreRR = 40;
+    else if (boxPos >= 0.95) scoreRR = 60; 
+    else if (boxPos >= 0.9) scoreRR = 50;
+    else if (boxPos >= 0.85) scoreRR = 40;
 
     const totalScore = scoreHardness + scoreRR;
-    if (totalScore < 75) { rejectedCount++; return; }
+    if (totalScore < 80) { rejectedCount++; return; } // 严控分数，只留极品
 
     const base = instId.split('-')[0];
     if (isCooldown(base)) return; 
 
     let signal = '', stopLoss = 0, tp = 0;
 
-    if (boxPos <= 0.35) {
+    if (boxPos <= 0.15) {
       signal = 'LONG';
       stopLoss = minL * 0.995; 
       tp = maxH; 
@@ -243,7 +248,7 @@ async function runScan() {
   await Promise.all(promises);
   isScanning = false;
   
-  if (failCount === 100) {
+  if (failCount === FIXED_COINS.length) {
       $('st1').innerText = `❌ 网络全盘失败`;
       $('err-msg').style.display = 'block';
       return;
@@ -260,18 +265,18 @@ async function runScan() {
 
     let html = `
       <div class="card">
-        <div class="rank-badge">🏆 全市场最强</div>
+        <div class="rank-badge">🏆 完美箱体</div>
         <div class="t" style="margin-top:5px;">
           <span>${best.base} <span class="badge" style="border-color:${scoreColor}; color:${scoreColor}">${best.totalScore}分</span></span>
           <span class="badge" style="color:${color}">${dirTxt}</span>
         </div>
         <div class="info">
           <span>现价:</span> <b>${px(best.curPrice)}</b>
-          <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
-          <span>密集箱顶:</span> <b class="S">${px(best.maxH)}</b>
-          <span>密集箱底:</span> <b class="L">${px(best.minL)}</b>
+          <span>振幅:</span> <b class="N">${best.amp.toFixed(2)}%</b>
+          <span>箱顶:</span> <b class="S">${px(best.maxH)}</b>
+          <span>箱底:</span> <b class="L">${px(best.minL)}</b>
           <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
-          <span>建议止盈:</span> <b class="B">${px(best.tp)}</b>
+          <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
           <span>触顶次数:</span> <b>${best.touchTop}次</b>
           <span>触底次数:</span> <b>${best.touchBottom}次</b>
         </div>
@@ -279,14 +284,14 @@ async function runScan() {
     `;
     
     $('out-cards').innerHTML = html;
-    $('st1').innerText = `✅ 锁定最强王者：${best.base}`;
+    $('st1').innerText = `✅ 锁定完美箱体：${best.base}`;
     $('list-area').style.display = 'block';
     
     playAlert();
     
   } else {
-    $('st1').innerText = `✅ 扫描完毕，全市场无真横盘`;
-    $('out-cards').innerHTML = `<div class="empty">全市场都在走单边，或者之前的暴涨暴跌导致当前无密集交易区 (已过滤 ${rejectedCount} 个假箱体)，耐心等待！</div>`;
+    $('st1').innerText = `✅ 扫描完毕，暂无完美箱体`;
+    $('out-cards').innerHTML = `<div class="empty">全市场都在走单边，或者没有符合 10K 完美震荡的箱体 (已过滤 ${rejectedCount} 个假信号)，耐心等待！</div>`;
     $('list-area').style.display = 'block';
   }
 }
@@ -302,11 +307,12 @@ function startAutoScan() {
   
   const nextScan = () => {
     const now = Date.now();
-    const next5m = Math.ceil(now / 300000) * 300000 + 2000;
+    // 15分钟 = 900000 毫秒
+    const next15m = Math.ceil(now / 900000) * 900000 + 2000;
     
     if(countdownTimer) clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
-        const left = Math.max(0, next5m - Date.now());
+        const left = Math.max(0, next15m - Date.now());
         const m = Math.floor(left / 60000);
         const s = Math.floor((left % 60000) / 1000);
         $('countdown').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
@@ -334,7 +340,7 @@ $('f_auto').onclick = () => {
   if(autoTimer) {
       autoTimer = null;
       clearInterval(countdownTimer);
-      $('f_auto').innerText = '⏱️ 开启 5m 自动巡航';
+      $('f_auto').innerText = '⏱️ 开启 15m 自动巡航';
       $('f_auto').classList.replace('b2', 'b3');
       $('countdown').innerText = '--:--';
       $('st1').innerText = '自动巡航已停止';
