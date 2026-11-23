@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 日线3稳+15m极值 V45</title>
+<title>OKX 日线2稳+15m极值 V46</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -52,7 +52,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 日线3稳+15m极值 V45</h1>
+    <h1>⚡ 日线2稳+15m极值 V46</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -209,29 +209,27 @@ async function scan1D() {
 
             let trendType = null;
 
-            // 做多：多头发散 + 检查最近 3 根 K 线，必须双均线防守
+            // 做多：多头发散 + 检查最近 2 根 K 线，必须双均线防守
             if (e5 > e20 && isE5Up && isE20Up) {
-                let stable3 = true;
-                for(let i=1; i<=3; i++) {
-                    const c = k[lastIdx - 3 + i];
-                    const curE5 = ema5[lastIdx - 3 + i];
-                    const curE20 = ema20[lastIdx - 3 + i];
-                    // 【核心修复】：收盘价和最低价，必须同时大于 EMA5 和 EMA20
-                    if (c.close <= curE5 || c.low <= curE5 || c.close <= curE20 || c.low <= curE20) stable3 = false;
+                let stable2 = true;
+                for(let i=1; i<=2; i++) {
+                    const c = k[lastIdx - 2 + i];
+                    const curE5 = ema5[lastIdx - 2 + i];
+                    const curE20 = ema20[lastIdx - 2 + i];
+                    if (c.close <= curE5 || c.low <= curE5 || c.close <= curE20 || c.low <= curE20) stable2 = false;
                 }
-                if (stable3) trendType = "LONG";
+                if (stable2) trendType = "LONG";
             } 
-            // 做空：空头发散 + 检查最近 3 根 K 线，必须双均线防守
+            // 做空：空头发散 + 检查最近 2 根 K 线，必须双均线防守
             else if (e5 < e20 && isE5Down && isE20Down) {
-                let stable3 = true;
-                for(let i=1; i<=3; i++) {
-                    const c = k[lastIdx - 3 + i];
-                    const curE5 = ema5[lastIdx - 3 + i];
-                    const curE20 = ema20[lastIdx - 3 + i];
-                    // 【核心修复】：收盘价和最高价，必须同时小于 EMA5 和 EMA20
-                    if (c.close >= curE5 || c.high >= curE5 || c.close >= curE20 || c.high >= curE20) stable3 = false;
+                let stable2 = true;
+                for(let i=1; i<=2; i++) {
+                    const c = k[lastIdx - 2 + i];
+                    const curE5 = ema5[lastIdx - 2 + i];
+                    const curE20 = ema20[lastIdx - 2 + i];
+                    if (c.close >= curE5 || c.high >= curE5 || c.close >= curE20 || c.high >= curE20) stable2 = false;
                 }
-                if (stable3) trendType = "SHORT";
+                if (stable2) trendType = "SHORT";
             }
 
             if (trendType) {
@@ -272,7 +270,6 @@ async function scan15M() {
 
         if (!k || k.length < 15 || !ticker) return;
         
-        // 防追高/防砸盘过滤
         if (ticker.change24h > 15 || ticker.change24h < -15) return;
 
         const last15 = k.slice(-15);
@@ -284,7 +281,6 @@ async function scan15M() {
 
         if (item.type === "LONG") {
             const minLow = Math.min(...last15.map(x => x.low));
-            // 做多：最后收盘的 K 线，最低价是近 15 根的最低
             if (lastK.low <= minLow * 1.001) {
                 if (realPrice <= lastK.close * 1.01) {
                     signalType = "LONG";
@@ -293,7 +289,6 @@ async function scan15M() {
             }
         } else if (item.type === "SHORT") {
             const maxHigh = Math.max(...last15.map(x => x.high));
-            // 做空：最后收盘的 K 线，最高价是近 15 根的最高
             if (lastK.high >= maxHigh * 0.999) {
                 if (realPrice >= lastK.close * 0.99) {
                     signalType = "SHORT";
@@ -313,7 +308,6 @@ async function scan15M() {
         }
     });
 
-    // 排序渲染
     results.sort((a, b) => b.score - a.score);
     for (let res of results) {
         const tagClass = res.type === "LONG" ? "tag-long" : "tag-short";
