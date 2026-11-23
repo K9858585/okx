@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 日线+15m极限狙击 V43</title>
+<title>OKX 日线3稳+15m极值 V44</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -52,7 +52,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 日线+15m极限狙击 V43</h1>
+    <h1>⚡ 日线3稳+15m极值 V44</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -73,7 +73,7 @@
 </div>
 
 <div class="strategy-block">
-    <div class="block-title">📊 日线稳站 + 15m极值点入场池</div>
+    <div class="block-title">📊 日线3稳 + 15m极值点入场池</div>
     <div class="table-container">
         <table>
             <thead><tr><th>币种</th><th>精准度</th><th>方向</th><th>日线支持</th><th>现价</th></tr></thead>
@@ -201,22 +201,42 @@ async function scan1D() {
             const ema5 = calcEMAArr(closes, 5);
             const ema20 = calcEMAArr(closes, 20);
             const lastIdx = k.length - 1;
-            const c0 = k[lastIdx];
+            
             const e5 = ema5[lastIdx], e20 = ema20[lastIdx];
-
+            
             // 完美发散（无拐头）
             const isE5Up = e5 > ema5[lastIdx-1] && ema5[lastIdx-1] > ema5[lastIdx-2];
             const isE5Down = e5 < ema5[lastIdx-1] && ema5[lastIdx-1] < ema5[lastIdx-2];
             const isE20Up = e20 > ema20[lastIdx-1];
             const isE20Down = e20 < ema20[lastIdx-1];
 
-            // 做多：多头发散 + 稳站上方 + 影线不碰 EMA20
-            if (e5 > e20 && isE5Up && isE20Up && c0.close > e20 && c0.low > e20) {
-                cached1DCoins.push({ coin, type: "LONG", e20: e20 });
+            let trendType = null;
+
+            // 做多初步条件：多头发散
+            if (e5 > e20 && isE5Up && isE20Up) {
+                let stable3 = true;
+                // 检查最近 3 根 K 线，必须稳站上方且影线不破
+                for(let i=1; i<=3; i++) {
+                    const c = k[lastIdx - 3 + i];
+                    const curE20 = ema20[lastIdx - 3 + i];
+                    if (c.close <= curE20 || c.low <= curE20) stable3 = false;
+                }
+                if (stable3) trendType = "LONG";
             } 
-            // 做空：空头发散 + 稳站下方 + 影线不碰 EMA20
-            else if (e5 < e20 && isE5Down && isE20Down && c0.close < e20 && c0.high < e20) {
-                cached1DCoins.push({ coin, type: "SHORT", e20: e20 });
+            // 做空初步条件：空头发散
+            else if (e5 < e20 && isE5Down && isE20Down) {
+                let stable3 = true;
+                // 检查最近 3 根 K 线，必须稳站下方且影线不破
+                for(let i=1; i<=3; i++) {
+                    const c = k[lastIdx - 3 + i];
+                    const curE20 = ema20[lastIdx - 3 + i];
+                    if (c.close >= curE20 || c.high >= curE20) stable3 = false;
+                }
+                if (stable3) trendType = "SHORT";
+            }
+
+            if (trendType) {
+                cached1DCoins.push({ coin, type: trendType, e20: e20 });
             }
         }
     });
@@ -264,13 +284,12 @@ async function scan15M() {
         let precision = 0;
 
         if (item.type === "LONG") {
-            // 做多：最后收盘的 K 线，最低价是近 15 根的最低
+            // 做多：最后收盘的 K 线，最低价是近 15 根的最低（允许极小容差防误差）
             const minLow = Math.min(...last15.map(x => x.low));
-            if (lastK.low <= minLow * 1.001) { // 允许 0.1% 的容差防误差
-                // 防追单：现价不能比收盘价高太多
+            if (lastK.low <= minLow * 1.001) {
+                // 防追单
                 if (realPrice <= lastK.close * 1.01) {
                     signalType = "LONG";
-                    // 精准度打分：下影线越探底，分数越高
                     precision = Math.round(100 - (Math.abs(lastK.low - minLow) / minLow * 10000));
                 }
             }
@@ -327,7 +346,6 @@ async function scan15M() {
 function startCycle1D() {
     const intervalMs = 24 * 60 * 60 * 1000;
     const now = Date.now();
-    // 日线按北京/香港时间 0点结算（UTC+16小时偏移）
     const offset = 16 * 60 * 60 * 1000; 
     const nextTime = Math.ceil((now - offset) / intervalMs) * intervalMs + offset + 2000;
     
@@ -383,7 +401,6 @@ async function toggleAuto() {
         updateCountdowns(); 
         uiTimer = setInterval(updateCountdowns, 1000);
         
-        // 启动时立即执行一次双层扫描
         await scan1D();
         await scan15M();
         
