@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 日线2稳+防逆势 V47</title>
+<title>OKX 日线2稳+防反抽 V48</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -52,7 +52,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 日线2稳+防逆势 V47</h1>
+    <h1>⚡ 日线2稳+防反抽 V48</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -184,7 +184,7 @@ async function fetchTicker(coin) {
     return null;
 }
 
-// ================= 第一层：1D 大趋势定势（防逆势/防拐头） =================
+// ================= 第一层：1D 大趋势定势 =================
 async function scan1D() {
     cached1DCoins = [];
     let completed = 0;
@@ -214,13 +214,14 @@ async function scan1D() {
 
             // === 做多严苛判定 ===
             if (e5 > e20 && isE5Up && isE20Up) {
-                // A. 斜率判定：EMA5 必须有明显上翘，拒绝走平
+                // 防连续转阴：最近 2 根日线中，不能有阴线
+                const isRecent2Green = k[lastIdx].close > k[lastIdx].open && k[lastIdx-1].close > k[lastIdx-1].open;
+                
+                // 斜率判定 & 偏离度
                 const slope = (e5 - e5_prev) / e5_prev;
-                // B. 偏离度判定：现价不能距离 EMA20 太远（防追高）
                 const bias = (closes[lastIdx] - e20) / e20;
                 
-                if (slope > 0.002 && bias < 0.08) {
-                    // C. 最近2根K线强防守
+                if (isRecent2Green && slope > 0.002 && bias < 0.08) {
                     let stable2 = true;
                     for(let i=1; i<=2; i++) {
                         const c = k[lastIdx - 2 + i];
@@ -233,12 +234,13 @@ async function scan1D() {
             } 
             // === 做空严苛判定 ===
             else if (e5 < e20 && isE5Down && isE20Down) {
-                // A. 斜率判定：EMA5 必须有明显下倾，拒绝走平
+                // 【核心新增】：防连续转阳：最近 2 根日线中，不能有阳线
+                const isRecent2Red = k[lastIdx].close < k[lastIdx].open && k[lastIdx-1].close < k[lastIdx-1].open;
+                
                 const slope = (e5_prev - e5) / e5_prev;
-                // B. 偏离度判定：现价不能距离 EMA20 太远（防过度追空）
                 const bias = (e20 - closes[lastIdx]) / e20;
 
-                if (slope > 0.002 && bias < 0.08) {
+                if (isRecent2Red && slope > 0.002 && bias < 0.08) {
                     let stable2 = true;
                     for(let i=1; i<=2; i++) {
                         const c = k[lastIdx - 2 + i];
