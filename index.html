@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 1H(3根)定势+5m箱体极值</title>
+<title>欧易 1H定势+5m动态完美箱体</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -33,7 +33,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1H(3根定势) + 5m箱体极值</h2>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1H定势 + 5m动态箱体极值</h2>
   <button class="btn b1" id="f1">🔍 立即扫描</button>
   <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
@@ -47,7 +47,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 
 <div id="result-area">
   <div class="win" id="list-area" style="display:none;">
-    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 严格贴合1H均线方向(连续3根)，且5m回踩箱体极值的信号。</div>
+    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 已自动适配最紧凑的箱体，防止跌破前期低点接飞刀。</div>
     <div id="out-cards"></div>
   </div>
 </div>
@@ -79,19 +79,19 @@ function calcEMA(arr, period) {
 }
 
 function getCache() {
-    const raw = localStorage.getItem('okx_1h_5m_cache');
+    const raw = localStorage.getItem('okx_dynamic_box_cache');
     return raw ? JSON.parse(raw) : {};
 }
 function updateCache(coinName) {
     const cache = getCache();
     cache[coinName] = Date.now();
-    localStorage.setItem('okx_1h_5m_cache', JSON.stringify(cache));
+    localStorage.setItem('okx_dynamic_box_cache', JSON.stringify(cache));
 }
 function isCooldown(coinName) {
     const cache = getCache();
     const lastTime = cache[coinName];
     if (!lastTime) return false;
-    return (Date.now() - lastTime) < 3600000; // 1小时冷却
+    return (Date.now() - lastTime) < 3600000; 
 }
 
 function playAlert(){
@@ -136,7 +136,7 @@ async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>扫描中...';
+  $('st1').innerHTML = '<span class="sp"></span>扫描动态完美箱体中...';
   $('list-area').style.display = 'none';
   
   const targetInstIds = FIXED_COINS.map(c => c.replace('USDT', '-USDT-SWAP'));
@@ -144,59 +144,74 @@ async function runScan() {
   let done = 0;
 
   const promises = targetInstIds.map(async (instId) => {
-    // 并发请求 1H 和 5m 数据 (1H请求35根，足够计算EMA20)
     const [res1h, res5m] = await Promise.all([
         fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=1H&limit=35`),
-        fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=35`)
+        fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=50`) // 抓50根，用于动态游标
     ]);
     
     done++;
     $('percent').innerText = `${Math.round((done/FIXED_COINS.length)*100)}%`;
     
     if (res1h.err || !res1h.data || res1h.data.length < 25) return;
-    if (res5m.err || !res5m.data || res5m.data.length < 30) return;
+    if (res5m.err || !res5m.data || res5m.data.length < 40) return;
 
     const k1h = parseK(res1h.data);
     const k5m = parseK(res5m.data);
 
-    // === 1. 1H 定势 (连续3根严格判定) ===
+    // === 1. 1H 定势 (连续3根) ===
     const ema20_1h = calcEMA(k1h.c, 20);
-    let is1hLong = true;
-    let is1hShort = true;
+    let is1hLong = true, is1hShort = true;
     
-    // 检查最近3根已收盘的1H K线
     for(let i=1; i<=3; i++) {
         const idx = k1h.c.length - i;
-        // 做多：这3根K线，每一根的收盘价和最低价都在 EMA20 之上
         if (k1h.c[idx] <= ema20_1h[idx] || k1h.l[idx] <= ema20_1h[idx]) is1hLong = false;
-        // 做空：这3根K线，每一根的收盘价和最高价都在 EMA20 之下
         if (k1h.c[idx] >= ema20_1h[idx] || k1h.h[idx] >= ema20_1h[idx]) is1hShort = false;
     }
+    if (!is1hLong && !is1hShort) return; 
 
-    if (!is1hLong && !is1hShort) return; // 趋势不符直接淘汰
-
-    // === 2. 5m 箱体计算 (最近30根) ===
-    const last30H = k5m.h.slice(-30);
-    const last30L = k5m.l.slice(-30);
-    const last30C = k5m.c.slice(-30);
+    // === 2. 5m 动态寻找最紧凑箱体 (10~40根) ===
+    const curPrice = k5m.c[k5m.c.length - 1];
+    let foundBox = null;
     
-    const maxH = Math.max(...last30H);
-    const minL = Math.min(...last30L);
-    const curPrice = last30C[last30C.length - 1];
+    // 从 10 根开始，逐渐放宽到 40 根
+    for (let len = 10; len <= 40; len++) {
+        const startIdx = k5m.c.length - len;
+        const winH = k5m.h.slice(startIdx);
+        const winL = k5m.l.slice(startIdx);
+        
+        const maxH = Math.max(...winH);
+        const minL = Math.min(...winL);
+        const amp = (maxH - minL) / minL * 100;
+        
+        // 振幅必须紧凑，小于 2.5% 才算完美箱体
+        if (amp <= 2.5) {
+            // 检查触碰次数
+            let touchTop = 0, touchBottom = 0;
+            for(let i=0; i<len; i++) {
+                if(winH[i] >= maxH * 0.999) touchTop++;
+                if(winL[i] <= minL * 1.001) touchBottom++;
+            }
+            
+            // 至少碰过顶和底各 2 次，说明支撑阻力有效
+            if (touchTop >= 2 && touchBottom >= 2) {
+                foundBox = { maxH, minL, amp, len };
+                break; // 找到最紧凑的就立刻停止，防止扩大带来旧极值
+            }
+        }
+    }
 
-    // 振幅过滤：如果箱体太大（>5%），说明是单边，不是箱体
-    const amp = (maxH - minL) / minL * 100;
-    if (amp > 5.0) return;
+    if (!foundBox) return; // 没找到紧凑箱体
 
+    const { maxH, minL, amp, len } = foundBox;
+    
     // === 3. 极值判定 ===
+    const boxPos = (curPrice - minL) / (maxH - minL); 
     let signal = null;
     
-    // 做多：必须在箱底附近 (现价 <= 箱底 * 1.003)
-    if (is1hLong && curPrice <= minL * 1.003) {
+    // 现价必须极度贴边 (15% 空间内)
+    if (is1hLong && boxPos <= 0.15) {
         signal = 'LONG';
-    }
-    // 做空：必须在箱顶附近 (现价 >= 箱顶 * 0.997)
-    else if (is1hShort && curPrice >= maxH * 0.997) {
+    } else if (is1hShort && boxPos >= 0.85) {
         signal = 'SHORT';
     }
 
@@ -205,19 +220,15 @@ async function runScan() {
     const base = instId.split('-')[0];
     if (isCooldown(base)) return; 
 
-    // === 4. 止盈止损计算 (在箱体内部) ===
+    // === 4. 止盈止损计算 ===
     let stopLoss = 0, tp = 0;
     
     if (signal === 'LONG') {
-        // 做多止损：箱底往下 0.2% (防插针)
-        stopLoss = minL * 0.998;
-        // 做多止盈：箱顶往下 0.1% (不贪，落袋为安)
-        tp = maxH * 0.999;
+        stopLoss = minL * 0.998; // 箱底往下 0.2%
+        tp = maxH * 0.999;       // 箱顶往下 0.1%
     } else {
-        // 做空止损：箱顶往上 0.2%
-        stopLoss = maxH * 1.002;
-        // 做空止盈：箱底往上 0.1%
-        tp = minL * 1.001;
+        stopLoss = maxH * 1.002; // 箱顶往上 0.2%
+        tp = minL * 1.001;       // 箱底往上 0.1%
     }
 
     const risk = Math.abs(curPrice - stopLoss);
@@ -228,14 +239,13 @@ async function runScan() {
     updateCache(base);
 
     results.push({
-      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, rr, is1hLong
+      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, rr, boxLen: len
     });
   });
 
   await Promise.all(promises);
   isScanning = false;
   
-  // 按盈亏比排序，优先推荐盈亏比高的
   results.sort((a, b) => parseFloat(b.rr) - parseFloat(a.rr));
 
   if (results.length > 0) {
@@ -259,6 +269,7 @@ async function runScan() {
               <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
               <span>箱顶:</span> <b class="S">${px(best.maxH)}</b>
               <span>箱底:</span> <b class="L">${px(best.minL)}</b>
+              <span>箱体振幅:</span> <b class="N">${best.amp.toFixed(2)}% (${best.boxLen}根)</b>
               <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
               <span>建议止盈:</span> <b class="B">${px(best.tp)}</b>
             </div>
@@ -267,19 +278,18 @@ async function runScan() {
     });
     
     $('out-cards').innerHTML = html;
-    $('st1').innerText = `✅ 发现 ${results.length} 个共振信号`;
+    $('st1').innerText = `✅ 发现 ${results.length} 个动态完美箱体信号`;
     $('list-area').style.display = 'block';
     
     playAlert();
     
   } else {
     $('st1').innerText = `✅ 扫描完毕，暂无完美箱体极值`;
-    $('out-cards').innerHTML = `<div class="empty">大趋势不符(1H未连稳3根)，或未回踩到箱体边缘。耐心等待！</div>`;
+    $('out-cards').innerHTML = `<div class="empty">大趋势不符，或者当前没有形成振幅小于2.5%的紧凑箱体。耐心等待！</div>`;
     $('list-area').style.display = 'block';
   }
 }
 
-// 定时器
 let countdownTimer = null;
 function startAutoScan() {
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
