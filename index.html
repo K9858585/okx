@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 日线2稳+15m极值 V46</title>
+<title>OKX 日线2稳+防逆势 V47</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -52,7 +52,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 日线2稳+15m极值 V46</h1>
+    <h1>⚡ 日线2稳+防逆势 V47</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -73,7 +73,7 @@
 </div>
 
 <div class="strategy-block">
-    <div class="block-title">📊 日线双均线稳站 + 15m极值池</div>
+    <div class="block-title">📊 日线严格发散 + 15m极值池</div>
     <div class="table-container">
         <table>
             <thead><tr><th>币种</th><th>精准度</th><th>方向</th><th>日线支持</th><th>现价</th></tr></thead>
@@ -184,7 +184,7 @@ async function fetchTicker(coin) {
     return null;
 }
 
-// ================= 第一层：1D 大趋势定势 =================
+// ================= 第一层：1D 大趋势定势（防逆势/防拐头） =================
 async function scan1D() {
     cached1DCoins = [];
     let completed = 0;
@@ -201,35 +201,53 @@ async function scan1D() {
             const lastIdx = k.length - 1;
             
             const e5 = ema5[lastIdx], e20 = ema20[lastIdx];
-            
-            const isE5Up = e5 > ema5[lastIdx-1] && ema5[lastIdx-1] > ema5[lastIdx-2];
-            const isE5Down = e5 < ema5[lastIdx-1] && ema5[lastIdx-1] < ema5[lastIdx-2];
-            const isE20Up = e20 > ema20[lastIdx-1];
-            const isE20Down = e20 < ema20[lastIdx-1];
+            const e5_prev = ema5[lastIdx-1], e20_prev = ema20[lastIdx-1];
+            const e5_prev2 = ema5[lastIdx-2];
+
+            // 1. 核心发散（一票否决）
+            const isE5Up = e5 > e5_prev && e5_prev > e5_prev2;
+            const isE5Down = e5 < e5_prev && e5_prev < e5_prev2;
+            const isE20Up = e20 > e20_prev;
+            const isE20Down = e20 < e20_prev;
 
             let trendType = null;
 
-            // 做多：多头发散 + 检查最近 2 根 K 线，必须双均线防守
+            // === 做多严苛判定 ===
             if (e5 > e20 && isE5Up && isE20Up) {
-                let stable2 = true;
-                for(let i=1; i<=2; i++) {
-                    const c = k[lastIdx - 2 + i];
-                    const curE5 = ema5[lastIdx - 2 + i];
-                    const curE20 = ema20[lastIdx - 2 + i];
-                    if (c.close <= curE5 || c.low <= curE5 || c.close <= curE20 || c.low <= curE20) stable2 = false;
+                // A. 斜率判定：EMA5 必须有明显上翘，拒绝走平
+                const slope = (e5 - e5_prev) / e5_prev;
+                // B. 偏离度判定：现价不能距离 EMA20 太远（防追高）
+                const bias = (closes[lastIdx] - e20) / e20;
+                
+                if (slope > 0.002 && bias < 0.08) {
+                    // C. 最近2根K线强防守
+                    let stable2 = true;
+                    for(let i=1; i<=2; i++) {
+                        const c = k[lastIdx - 2 + i];
+                        const curE5 = ema5[lastIdx - 2 + i];
+                        const curE20 = ema20[lastIdx - 2 + i];
+                        if (c.close <= curE5 || c.low <= curE5 || c.close <= curE20 || c.low <= curE20) stable2 = false;
+                    }
+                    if (stable2) trendType = "LONG";
                 }
-                if (stable2) trendType = "LONG";
             } 
-            // 做空：空头发散 + 检查最近 2 根 K 线，必须双均线防守
+            // === 做空严苛判定 ===
             else if (e5 < e20 && isE5Down && isE20Down) {
-                let stable2 = true;
-                for(let i=1; i<=2; i++) {
-                    const c = k[lastIdx - 2 + i];
-                    const curE5 = ema5[lastIdx - 2 + i];
-                    const curE20 = ema20[lastIdx - 2 + i];
-                    if (c.close >= curE5 || c.high >= curE5 || c.close >= curE20 || c.high >= curE20) stable2 = false;
+                // A. 斜率判定：EMA5 必须有明显下倾，拒绝走平
+                const slope = (e5_prev - e5) / e5_prev;
+                // B. 偏离度判定：现价不能距离 EMA20 太远（防过度追空）
+                const bias = (e20 - closes[lastIdx]) / e20;
+
+                if (slope > 0.002 && bias < 0.08) {
+                    let stable2 = true;
+                    for(let i=1; i<=2; i++) {
+                        const c = k[lastIdx - 2 + i];
+                        const curE5 = ema5[lastIdx - 2 + i];
+                        const curE20 = ema20[lastIdx - 2 + i];
+                        if (c.close >= curE5 || c.high >= curE5 || c.close >= curE20 || c.high >= curE20) stable2 = false;
+                    }
+                    if (stable2) trendType = "SHORT";
                 }
-                if (stable2) trendType = "SHORT";
             }
 
             if (trendType) {
