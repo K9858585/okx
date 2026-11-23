@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 5m 箱体震荡探测终端 (v303 放宽版)</title>
+<title>欧易 5m 箱体震荡探测 (直连极速版)</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -31,13 +31,13 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 
 <div class="win">
   <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 箱体震荡探测器</h2>
-  <button class="btn b1" id="f1">🔍 扫描当前震荡币种</button>
+  <button class="btn b1" id="f1">🔍 扫描震荡币种 (需直连)</button>
   <div class="st">
     <span id="st1">准备就绪</span>
     <span id="percent" style="color:#ff9f0a; font-weight:bold;">0%</span>
   </div>
   <div id="err-msg" style="display:none; margin-top:10px;">
-      <div class="btn b2" onclick="location.reload()">网络请求失败，点击刷新重试</div>
+      <div class="btn b2" onclick="location.reload()">网络请求失败 (请检查梯子是否全局)</div>
   </div>
 </div>
 
@@ -49,6 +49,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 </div>
 
 <script>
+// 专属 100 币种池
 const FIXED_COINS = [
   "BTCUSDT", "ETHUSDT", "SOXLUSDT", "SNDKUSDT", "ZECUSDT", "SOLUSDT", "NVDAUSDT", "XAUUSDT", "ANTUSDT", "MMTUSDT",
   "MUUSDT", "XRPUSDT", "SKHYNIXUSDT", "SOXSUSDT", "HYPEUSDT", "PIEVERSEUSDT", "BREVUSDT", "XAGUSDT", "KORUUSDT", "DOGEUSDT",
@@ -62,40 +63,30 @@ const FIXED_COINS = [
   "ICPUSDT", "SQQQUSDT", "CXMTUSDT", "BEUSDT", "SOPHUSDT", "PROSUSDT", "EWYUSDT", "USELESSUSDT", "ZKPUSDT", "OPUSDT"
 ];
 
-const PROXIES = [
-  "https://api.codetabs.com/v1/proxy?quest=",
-  "https://corsproxy.io/?",
-  "https://api.allorigins.win/raw?url="
-];
-
 const $=i=>document.getElementById(i);
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(6);
 
-async function okx(path, retries=2){
-  const targetUrl = 'https://www.okx.com' + path;
-  for(let i=0; i<=retries; i++){
-    const proxy = PROXIES[i % PROXIES.length];
-    const fetchUrl = proxy + encodeURIComponent(targetUrl);
+// 纯净直连请求，不带任何 CORS 代理
+async function fetchOKXDirect(path) {
+    const url = 'https://www.okx.com' + path;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5000);
-    try{
-      const r = await fetch(fetchUrl, { signal: ctrl.signal });
-      clearTimeout(timer);
-      if(r.status === 429 || r.status >= 500) continue;
-      if(!r.ok) continue;
-      const j = await r.json();
-      if(j.code !== '0') return {err:`API:${j.msg}`};
-      return {data:j.data};
-    }catch(e){
-      clearTimeout(timer);
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (!res.ok) return { err: 'HTTP ' + res.status };
+        const json = await res.json();
+        if (json.code !== '0') return { err: json.msg };
+        return { data: json.data };
+    } catch (e) {
+        clearTimeout(timer);
+        return { err: '网络超时' };
     }
-  }
-  return {err: '网络超时'};
 }
 
 function parseK(d){
   const o=[],h=[],l=[],c=[];
+  // 只拿已收盘的 K 线
   const closedData = d.filter(x => x[8] === '1');
   const data=[...closedData].reverse();
   for(const x of data){
@@ -105,7 +96,7 @@ function parseK(d){
 }
 
 async function runScan() {
-  $('st1').innerHTML = '<span class="sp"></span>并发拉取 5m 数据中...';
+  $('st1').innerHTML = '<span class="sp"></span>直连拉取数据中...';
   $('err-msg').style.display = 'none';
   $('list-area').style.display = 'none';
   
@@ -115,8 +106,9 @@ async function runScan() {
   let done = 0;
   let failCount = 0;
 
+  // 瞬间并发发出请求
   const promises = targetInstIds.map(async (instId) => {
-    const kr = await okx(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=45`);
+    const kr = await fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=45`);
     done++;
     $('percent').innerText = `${Math.round((done/100)*100)}%`;
     
@@ -134,23 +126,20 @@ async function runScan() {
     const maxH = Math.max(...recent40.h);
     const minL = Math.min(...recent40.l);
     
-    // 【放宽1】：振幅只要在 0.3% - 5% 之间都行
     const amp = (maxH - minL) / minL * 100;
+    // 振幅过滤：大于0.3%，小于5%
     if (amp < 0.3 || amp > 5.0) return; 
 
-    // 当前价格在箱体的位置
     const boxPos = (curPrice - minL) / (maxH - minL); 
-    
-    // 【放宽2】：不再死死扣住边缘，只要低于 35% 或高于 65% 即可推荐
+    // 价格必须处在边缘（小于35%或大于65%）
     if (boxPos > 0.35 && boxPos < 0.65) return; 
 
-    // 【放宽3】：触碰极值次数降至 1 次
+    // 极值碰触过滤
     let touchTop = 0, touchBottom = 0;
     for(let i=0; i<40; i++) {
         if(recent40.h[i] >= maxH * 0.998) touchTop++;
         if(recent40.l[i] <= minL * 1.002) touchBottom++;
     }
-    
     if(touchTop < 1 || touchBottom < 1) return;
 
     const base = instId.split('-')[0];
@@ -170,14 +159,15 @@ async function runScan() {
     }
 
     results.push({
-      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, boxPos
+      base, curPrice, maxH, minL, amp, signal, stopLoss, tp
     });
   });
 
   await Promise.all(promises);
   
+  // 100个全失败，说明网络没通
   if (failCount === 100) {
-      $('st1').innerText = `❌ 100个币数据获取全部失败`;
+      $('st1').innerText = `❌ 网络全盘失败`;
       $('err-msg').style.display = 'block';
       return;
   }
@@ -209,11 +199,11 @@ async function runScan() {
       `;
     });
     $('out-cards').innerHTML = html;
-    $('st1').innerText = `✅ 发现 ${results.length} 个震荡箱体`;
+    $('st1').innerText = `✅ 发现 ${results.length} 个标准箱体`;
     $('list-area').style.display = 'block';
   } else {
-    $('st1').innerText = `✅ 扫描完毕，全市场暂无符合的震荡形态`;
-    $('out-cards').innerHTML = `<div class="empty">最近 40 根 5m 线中，当前所有币都在走单边，没有找到箱体震荡。</div>`;
+    $('st1').innerText = `✅ 扫描完毕，全市场都在走单边`;
+    $('out-cards').innerHTML = `<div class="empty">最近 40 根 5m 线中，所有币都在走趋势，没有卡在边缘的震荡箱体。</div>`;
     $('list-area').style.display = 'block';
   }
 }
