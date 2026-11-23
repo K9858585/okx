@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 1H定势+5m动态完美箱体</title>
+<title>欧易 1H定势+5m极致唯一箱体</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -15,26 +15,26 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .b2{background:#da3633;color:#fff}
 .b3{background:#238636;color:#fff}
 .st{margin:10px 0;padding:10px 12px;background:#161b22;border-radius:8px;font-size:13px;text-align:center; display:flex; justify-content:space-between; align-items:center;}
-.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:14px;margin:8px 0; animation: pop 0.3s ease-out; position:relative;}
+.card{background:#161b22;border:2px solid #ff9f0a;border-radius:14px;padding:16px;margin:15px 0; animation: pop 0.3s ease-out; position:relative; box-shadow: 0 0 20px rgba(255,159,10,0.15)}
 @keyframes pop { 0%{transform:scale(0.95);opacity:0} 100%{transform:scale(1);opacity:1} }
-.t{font-size:18px;font-weight:700; display:flex; justify-content:space-between; align-items:center;}
+.t{font-size:20px;font-weight:700; display:flex; justify-content:space-between; align-items:center;}
 .L{color:#3fb950}.S{color:#f85149}.N{color:#8b949e}.Y{color:#ff9f0a}.B{color:#58a6ff}
-.info{font-size:14px;line-height:1.8;margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:6px;}
+.info{font-size:14px;line-height:1.8;margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#0d1117; padding:12px; border-radius:8px;}
 .info span{color:#8b949e;}
 .info b{color:#fff;}
 .sp{display:inline-block;width:14px;height:14px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes r{to{transform:rotate(360deg)}}
 .empty{color:#8b949e;font-size:13px;padding:20px;text-align:center;border:1px dashed #30363d;border-radius:10px}
-.badge{font-size:13px; padding:3px 8px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
+.badge{font-size:14px; padding:4px 10px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
 .timer{color:#79c0ff; font-weight:bold; font-family:monospace;}
-.rank-badge { position: absolute; top: -10px; right: 14px; background: #ff9f0a; color: #000; font-weight: bold; font-size: 13px; padding: 2px 10px; border-radius: 10px; box-shadow: 0 2px 5px rgba(255,159,10,0.5); }
+.crown-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #ff9f0a, #ffb347); color: #000; font-weight: bold; font-size: 14px; padding: 4px 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(255,159,10,0.4); white-space: nowrap;}
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1H定势 + 5m动态箱体极值</h2>
-  <button class="btn b1" id="f1">🔍 立即扫描</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1H定势 + 5m极致唯一箱体</h2>
+  <button class="btn b1" id="f1">🔍 寻找最强完美箱体</button>
   <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
     <span id="st1">准备就绪</span>
@@ -46,8 +46,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 </div>
 
 <div id="result-area">
-  <div class="win" id="list-area" style="display:none;">
-    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 已自动适配最紧凑的箱体，防止跌破前期低点接飞刀。</div>
+  <div class="win" id="list-area" style="display:none; background: transparent; border: none; padding: 0;">
     <div id="out-cards"></div>
   </div>
 </div>
@@ -79,19 +78,19 @@ function calcEMA(arr, period) {
 }
 
 function getCache() {
-    const raw = localStorage.getItem('okx_dynamic_box_cache');
+    const raw = localStorage.getItem('okx_unique_box_cache');
     return raw ? JSON.parse(raw) : {};
 }
 function updateCache(coinName) {
     const cache = getCache();
     cache[coinName] = Date.now();
-    localStorage.setItem('okx_dynamic_box_cache', JSON.stringify(cache));
+    localStorage.setItem('okx_unique_box_cache', JSON.stringify(cache));
 }
 function isCooldown(coinName) {
     const cache = getCache();
     const lastTime = cache[coinName];
     if (!lastTime) return false;
-    return (Date.now() - lastTime) < 3600000; 
+    return (Date.now() - lastTime) < 3600000; // 1小时冷却
 }
 
 function playAlert(){
@@ -136,24 +135,25 @@ async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>扫描动态完美箱体中...';
+  $('st1').innerHTML = '<span class="sp"></span>寻找全市场最强唯一箱体...';
   $('list-area').style.display = 'none';
   
   const targetInstIds = FIXED_COINS.map(c => c.replace('USDT', '-USDT-SWAP'));
-  let results = [];
+  let allValidSignals = [];
   let done = 0;
 
   const promises = targetInstIds.map(async (instId) => {
+    // 抓取 60 根 5m 供动态扫描使用
     const [res1h, res5m] = await Promise.all([
         fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=1H&limit=35`),
-        fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=50`) // 抓50根，用于动态游标
+        fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=60`) 
     ]);
     
     done++;
     $('percent').innerText = `${Math.round((done/FIXED_COINS.length)*100)}%`;
     
     if (res1h.err || !res1h.data || res1h.data.length < 25) return;
-    if (res5m.err || !res5m.data || res5m.data.length < 40) return;
+    if (res5m.err || !res5m.data || res5m.data.length < 50) return;
 
     const k1h = parseK(res1h.data);
     const k5m = parseK(res5m.data);
@@ -169,12 +169,12 @@ async function runScan() {
     }
     if (!is1hLong && !is1hShort) return; 
 
-    // === 2. 5m 动态寻找最紧凑箱体 (10~40根) ===
+    // === 2. 5m 动态寻找最紧凑箱体 (10~50根) ===
     const curPrice = k5m.c[k5m.c.length - 1];
     let foundBox = null;
     
-    // 从 10 根开始，逐渐放宽到 40 根
-    for (let len = 10; len <= 40; len++) {
+    // 从 10 根开始，逐渐放宽到 50 根
+    for (let len = 10; len <= 50; len++) {
         const startIdx = k5m.c.length - len;
         const winH = k5m.h.slice(startIdx);
         const winL = k5m.l.slice(startIdx);
@@ -183,32 +183,30 @@ async function runScan() {
         const minL = Math.min(...winL);
         const amp = (maxH - minL) / minL * 100;
         
-        // 振幅必须紧凑，小于 2.5% 才算完美箱体
+        // 振幅必须紧凑
         if (amp <= 2.5) {
-            // 检查触碰次数
             let touchTop = 0, touchBottom = 0;
             for(let i=0; i<len; i++) {
                 if(winH[i] >= maxH * 0.999) touchTop++;
                 if(winL[i] <= minL * 1.001) touchBottom++;
             }
             
-            // 至少碰过顶和底各 2 次，说明支撑阻力有效
+            // 支撑阻力有效，立刻锁定，停止扩大范围
             if (touchTop >= 2 && touchBottom >= 2) {
-                foundBox = { maxH, minL, amp, len };
-                break; // 找到最紧凑的就立刻停止，防止扩大带来旧极值
+                foundBox = { maxH, minL, amp, len, touchTop, touchBottom };
+                break; 
             }
         }
     }
 
-    if (!foundBox) return; // 没找到紧凑箱体
+    if (!foundBox) return; 
 
-    const { maxH, minL, amp, len } = foundBox;
+    const { maxH, minL, amp, len, touchTop, touchBottom } = foundBox;
     
     // === 3. 极值判定 ===
     const boxPos = (curPrice - minL) / (maxH - minL); 
     let signal = null;
     
-    // 现价必须极度贴边 (15% 空间内)
     if (is1hLong && boxPos <= 0.15) {
         signal = 'LONG';
     } else if (is1hShort && boxPos >= 0.85) {
@@ -224,11 +222,11 @@ async function runScan() {
     let stopLoss = 0, tp = 0;
     
     if (signal === 'LONG') {
-        stopLoss = minL * 0.998; // 箱底往下 0.2%
-        tp = maxH * 0.999;       // 箱顶往下 0.1%
+        stopLoss = minL * 0.998;
+        tp = maxH * 0.999;
     } else {
-        stopLoss = maxH * 1.002; // 箱顶往上 0.2%
-        tp = minL * 1.001;       // 箱底往上 0.1%
+        stopLoss = maxH * 1.002;
+        tp = minL * 1.001;
     }
 
     const risk = Math.abs(curPrice - stopLoss);
@@ -236,56 +234,67 @@ async function runScan() {
     let rr = 0;
     if (risk > 0) rr = (reward / risk).toFixed(1);
 
+    // === 5. 综合打分系统 (满分 100) ===
+    // A. 紧凑度得分 (最高40分)：振幅越小越好
+    let scoreTight = Math.max(0, 40 - (amp / 2.5) * 40);
+    
+    // B. 触碰强度得分 (最高30分)：触碰次数越多越结实
+    let scoreTouch = Math.min(30, (touchTop + touchBottom) * 3);
+    
+    // C. 盈亏比得分 (最高30分)：RR大于3得满分
+    let scoreRR = Math.min(30, parseFloat(rr) * 10);
+
+    const finalScore = Math.round(scoreTight + scoreTouch + scoreRR);
+
     updateCache(base);
 
-    results.push({
-      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, rr, boxLen: len
+    allValidSignals.push({
+      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, rr, boxLen: len, finalScore
     });
   });
 
   await Promise.all(promises);
   isScanning = false;
   
-  results.sort((a, b) => parseFloat(b.rr) - parseFloat(a.rr));
+  // 按综合得分降序排列
+  allValidSignals.sort((a, b) => b.finalScore - a.finalScore);
 
-  if (results.length > 0) {
-    let html = '';
-    results.slice(0, 3).forEach((best, index) => {
-        const isLong = best.signal === 'LONG';
-        const color = isLong ? '#3fb950' : '#f85149';
-        const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
-        const rankClass = index === 0 ? '' : (index === 1 ? 'rank2' : 'rank3');
-        const rankText = index === 0 ? '🏆 完美共振' : `⭐ 候选 ${index+1}`;
+  if (allValidSignals.length > 0) {
+    const best = allValidSignals[0]; // 只取第一名
+    const isLong = best.signal === 'LONG';
+    const color = isLong ? '#3fb950' : '#f85149';
+    const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
 
-        html += `
-          <div class="card">
-            <div class="rank-badge ${rankClass}">${rankText}</div>
-            <div class="t" style="margin-top:5px;">
-              <span>${best.base} <span class="badge" style="color:${color}">1H${isLong?'多头':'空头'}</span></span>
-              <span class="badge" style="color:${color}">${dirTxt}</span>
-            </div>
-            <div class="info">
-              <span>现价:</span> <b>${px(best.curPrice)}</b>
-              <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
-              <span>箱顶:</span> <b class="S">${px(best.maxH)}</b>
-              <span>箱底:</span> <b class="L">${px(best.minL)}</b>
-              <span>箱体振幅:</span> <b class="N">${best.amp.toFixed(2)}% (${best.boxLen}根)</b>
-              <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
-              <span>建议止盈:</span> <b class="B">${px(best.tp)}</b>
-            </div>
-          </div>
-        `;
-    });
+    let html = `
+      <div class="card">
+        <div class="crown-badge">👑 全市场最强完美箱体</div>
+        <div class="t" style="margin-top:10px;">
+          <span>${best.base} <span class="badge" style="border-color:${color}; color:${color}; font-size:12px;">1H${isLong?'多头':'空头'}</span></span>
+          <span class="badge" style="color:${color}; border-color:${color}; font-weight:bold;">${dirTxt}</span>
+        </div>
+        <div class="info">
+          <span>箱体得分:</span> <b class="Y">${best.finalScore} 分</b>
+          <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
+          <span>箱顶:</span> <b class="S">${px(best.maxH)}</b>
+          <span>箱底:</span> <b class="L">${px(best.minL)}</b>
+          <span>箱体振幅:</span> <b class="N">${best.amp.toFixed(2)}%</b>
+          <span>箱体根数:</span> <b class="N">${best.boxLen}根</b>
+          <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
+          <span>建议止盈:</span> <b class="B">${px(best.tp)}</b>
+          <span style="grid-column: span 2; text-align:center; color:#8b949e; margin-top:5px;">👉 现价: <b>${px(best.curPrice)}</b></span>
+        </div>
+      </div>
+    `;
     
     $('out-cards').innerHTML = html;
-    $('st1').innerText = `✅ 发现 ${results.length} 个动态完美箱体信号`;
+    $('st1').innerText = `✅ 已锁定全市场最强箱体：${best.base}`;
     $('list-area').style.display = 'block';
     
     playAlert();
     
   } else {
-    $('st1').innerText = `✅ 扫描完毕，暂无完美箱体极值`;
-    $('out-cards').innerHTML = `<div class="empty">大趋势不符，或者当前没有形成振幅小于2.5%的紧凑箱体。耐心等待！</div>`;
+    $('st1').innerText = `✅ 扫描完毕，暂无完美箱体`;
+    $('out-cards').innerHTML = `<div class="empty" style="margin-top:15px;">当前全市场都在走单边，没有振幅小于2.5%且触碰达标的紧凑箱体。耐心等待！</div>`;
     $('list-area').style.display = 'block';
   }
 }
