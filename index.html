@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>OKX 日线2稳+防反抽 V48</title>
+<title>OKX 日线2稳+防反抽 V49 (200币版)</title>
 <style>
     :root {
         --bg-color: #0b0e14; --card-bg: #151a24; --text-main: #e2e8f0; --text-sub: #94a3b8;
@@ -52,7 +52,7 @@
 <body>
 
 <div class="header">
-    <h1>⚡ 日线2稳+防反抽 V48</h1>
+    <h1>⚡ 日线2稳+防反抽 V49 (200币)</h1>
 </div>
 
 <button class="master-btn" id="masterBtn" onclick="toggleAuto()">启动自动巡航</button>
@@ -85,8 +85,11 @@
 <script>
 const OKX_URL = "https://www.okx.com/api/v5/market/candles";
 const OKX_TICKER = "https://www.okx.com/api/v5/market/ticker";
+const PROXIES = ["", "https://api.codetabs.com/v1/proxy?quest=", "https://corsproxy.io/?"];
 
+// 【核心更新】：融合原有的100个，再加上你新提供的100个，总计200个。
 const FIXED_COINS = [
+    // --- 原 100 池 ---
     "UP", "ZRO", "XPL", "BERA", "CRWV", "AVGO", "NIGHT", "ICP", "META", 
     "APT", "SAMSUNG", "PENGU", "JUP", "XLM", "ZHIPU", "CRV", "TSM", "MUU", 
     "TRX", "ONDO", "VVV", "AAOI", "PONS", "ASTER", "SHIB", "OP", "DOT", 
@@ -96,8 +99,23 @@ const FIXED_COINS = [
     "XAU", "NVDA", "IRYS", "MMT", "PIEVERSE", "SOXL", "AKE", "PIPPIN", "SPCX", "SKHYNIX", 
     "BTW", "MU", "HUMA", "HYPE", "CL", "PEPE", "XAG", "CAP", "PROS", 
     "SENT", "YB", "AMD", "QQQ", "BREV", "RAVE", "INTC", "NESA", "SOXS", 
-    "PUMP", "TRUMP", "UNITREE", "NEAR", "SNXX", "PDD", "GOOGL", "KORU", "LIT", "INI", "USELESS"
+    "PUMP", "TRUMP", "UNITREE", "NEAR", "SNXX", "PDD", "GOOGL", "KORU", "LIT", "INI", "USELESS",
+    
+    // --- 新增 100 池 ---
+    "BTC", "ETH", "SOXL", "SNDK", "ZEC", "SOL", "NVDA", "XAU", "ANT", "MMT",
+    "MU", "XRP", "SKHYNIX", "SOXS", "HYPE", "PIEVERSE", "BREV", "XAG", "KORU", "DOGE",
+    "PEPE", "SPCX", "NEAR", "PIPPIN", "SNXX", "CL", "PUMP", "SKHY", "MSTR", "UNI",
+    "QQQ", "LIT", "AKE", "WLD", "AMD", "AAOI", "ENA", "FIL", "SUI", "INTC",
+    "ZHONGJI", "NBIS", "BNB", "CRCL", "TRUMP", "PENGU", "ADA", "AAVE", "TQQQ", "LINK",
+    "GOOGL", "UNITREE", "MRVL", "BZ", "LTC", "HUMA", "INJ", "STRK", "LITE", "BCH",
+    "AVAX", "ASTER", "TSLA", "IRYS", "CRWV", "DRAM", "TAO", "ZRO", "ARB", "SAMSUNG",
+    "ZIL", "UP", "ZHIPU", "VVV", "BTW", "AAPL", "XPL", "ONDO", "TRX", "OKB",
+    "TSM", "NES", "AXTI", "NIGHT", "SPY", "UVXY", "MUU", "DGAI", "GRAM", "XLM",
+    "ICP", "SQQQ", "CXMT", "BE", "SOPH", "PROS", "EWY", "USELESS", "ZKP", "OP"
 ];
+
+// 去重处理 (防止币种重复扫描)
+const UNIQUE_COINS = [...new Set(FIXED_COINS)];
 
 let isRunning = false;
 let isScanning = false; 
@@ -156,31 +174,45 @@ async function asyncPool(poolLimit, array, iteratorFn) {
     return Promise.all(ret);
 }
 
-async function fetchKlines(coin, bar) {
-    try {
-        const sym = `${coin}-USDT-SWAP`;
-        const res = await fetch(`${OKX_URL}?instId=${sym}&bar=${bar}&limit=50`);
-        const json = await res.json();
-        if (json.code === "0" && json.data.length > 0) {
-            const all = json.data.reverse();
-            return all.filter(d => d[8] === '1').map(d => ({ 
-                open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) 
-            }));
+// 【核心优化】：加入了双重代理请求重试，防止200个币引发限流报错
+async function fetchWithRetry(url, retries=2) {
+    for(let i=0; i<=retries; i++) {
+        const proxy = PROXIES[i % PROXIES.length];
+        const fetchUrl = proxy ? proxy + encodeURIComponent(url) : url;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 6000);
+        try {
+            const res = await fetch(fetchUrl, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if(!res.ok) continue;
+            const json = await res.json();
+            if(json.code === "0") return json;
+        } catch(e) {
+            clearTimeout(timer);
         }
-    } catch(e) {}
+    }
+    return null;
+}
+
+async function fetchKlines(coin, bar) {
+    const sym = `${coin}-USDT-SWAP`;
+    const json = await fetchWithRetry(`${OKX_URL}?instId=${sym}&bar=${bar}&limit=50`);
+    if (json && json.data && json.data.length > 0) {
+        const all = json.data.reverse();
+        return all.filter(d => d[8] === '1').map(d => ({ 
+            open: parseFloat(d[1]), high: parseFloat(d[2]), low: parseFloat(d[3]), close: parseFloat(d[4]) 
+        }));
+    }
     return null;
 }
 
 async function fetchTicker(coin) {
-    try {
-        const res = await fetch(`${OKX_TICKER}?instId=${coin}-USDT-SWAP`);
-        const json = await res.json();
-        if (json.code === "0" && json.data.length > 0) {
-            const open24h = parseFloat(json.data[0].open24h);
-            const last = parseFloat(json.data[0].last);
-            return { last, change24h: ((last - open24h) / open24h) * 100 };
-        }
-    } catch(e) {}
+    const json = await fetchWithRetry(`${OKX_TICKER}?instId=${coin}-USDT-SWAP`);
+    if (json && json.data && json.data.length > 0) {
+        const open24h = parseFloat(json.data[0].open24h);
+        const last = parseFloat(json.data[0].last);
+        return { last, change24h: ((last - open24h) / open24h) * 100 };
+    }
     return null;
 }
 
@@ -189,10 +221,11 @@ async function scan1D() {
     cached1DCoins = [];
     let completed = 0;
 
-    await asyncPool(8, FIXED_COINS, async (coin) => {
+    // 并发池提高到 12 个
+    await asyncPool(12, UNIQUE_COINS, async (coin) => {
         const k = await fetchKlines(coin, "1D");
         completed++;
-        updateProgress(completed, FIXED_COINS.length, `[1D定势] 扫描: ${completed}/${FIXED_COINS.length}`);
+        updateProgress(completed, UNIQUE_COINS.length, `[1D定势] 扫描: ${completed}/${UNIQUE_COINS.length}`);
 
         if (k && k.length >= 30) {
             const closes = k.map(x => x.close);
@@ -234,7 +267,7 @@ async function scan1D() {
             } 
             // === 做空严苛判定 ===
             else if (e5 < e20 && isE5Down && isE20Down) {
-                // 【核心新增】：防连续转阳：最近 2 根日线中，不能有阳线
+                // 防连续转阳：最近 2 根日线中，不能有阳线
                 const isRecent2Red = k[lastIdx].close < k[lastIdx].open && k[lastIdx-1].close < k[lastIdx-1].open;
                 
                 const slope = (e5_prev - e5) / e5_prev;
@@ -280,7 +313,7 @@ async function scan15M() {
     let completed = 0;
     let results = [];
 
-    await asyncPool(10, cached1DCoins, async (item) => {
+    await asyncPool(12, cached1DCoins, async (item) => {
         const [k, ticker] = await Promise.all([
             fetchKlines(item.coin, "15m"),
             fetchTicker(item.coin)
