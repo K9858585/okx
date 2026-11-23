@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 5m 软箱体探测 (最强单发版)</title>
+<title>欧易 5m 真·横盘震荡探测 (防单边过滤版)</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -33,8 +33,8 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 软箱体探测器 (最强单发)</h2>
-  <button class="btn b1" id="f1">🔍 扫描全市场最强箱体</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 真·横盘探测 (防单边)</h2>
+  <button class="btn b1" id="f1">🔍 扫描全市场真横盘</button>
   <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
     <span id="st1">准备就绪 (请确保网络直连)</span>
@@ -50,7 +50,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 
 <div id="result-area">
   <div class="win" id="list-area" style="display:none;">
-    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 每次只推荐全市场得分最高、盈亏比最好的一只币。</div>
+    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 已开启“斜率锁”，剔除所有倾斜通道与单边中继。只推纯正横盘。</div>
     <div id="out-cards"></div>
   </div>
 </div>
@@ -75,15 +75,26 @@ let audioCtx = null;
 let autoTimer = null;
 let isScanning = false;
 
-// 1小时冷却缓存
+// 简单的 EMA 计算
+function calcEMA(arr, period) {
+    let k = 2 / (period + 1);
+    let ema = arr[0];
+    let res = [ema];
+    for (let i = 1; i < arr.length; i++) {
+        ema = arr[i] * k + ema * (1 - k);
+        res.push(ema);
+    }
+    return res;
+}
+
 function getCache() {
-    const raw = localStorage.getItem('okx_box_recommend_cache_v3');
+    const raw = localStorage.getItem('okx_box_recommend_cache_v4');
     return raw ? JSON.parse(raw) : {};
 }
 function updateCache(coinName) {
     const cache = getCache();
     cache[coinName] = Date.now();
-    localStorage.setItem('okx_box_recommend_cache_v3', JSON.stringify(cache));
+    localStorage.setItem('okx_box_recommend_cache_v4', JSON.stringify(cache));
 }
 function isCooldown(coinName) {
     const cache = getCache();
@@ -134,7 +145,7 @@ async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>全市场寻找最强王者箱体...';
+  $('st1').innerHTML = '<span class="sp"></span>执行防单边过滤中...';
   $('err-msg').style.display = 'none';
   $('list-area').style.display = 'none';
   
@@ -143,6 +154,7 @@ async function runScan() {
   let results = [];
   let done = 0;
   let failCount = 0;
+  let rejectedByTrend = 0; 
 
   const promises = targetInstIds.map(async (instId) => {
     const kr = await fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=65`);
@@ -162,15 +174,48 @@ async function runScan() {
     const recent60C = c.slice(-60);
     const curPrice = recent60C[recent60C.length - 1];
     
+    // === 【核心过滤1】：EMA20 平走判定 ===
+    // 如果均线斜率一直在往下/往上，说明是单边趋势，绝对不碰
+    const ema20 = calcEMA(recent60C, 20);
+    const ema20_cur = ema20[ema20.length - 1];
+    const ema20_10ago = ema20[ema20.length - 11];
+    const ema20_slope = (ema20_cur - ema20_10ago) / ema20_10ago;
+    
+    // 如果均线在10根内的斜率超过了 0.15%，说明是单边趋势，剔除
+    if (Math.abs(ema20_slope) > 0.0015) {
+        rejectedByTrend++;
+        return;
+    }
+
+    // === 【核心过滤2】：重心斜率判定 ===
+    // 把 60 根分成前 30 和后 30，看重心有没有严重偏移
+    const first30_L = recent60L.slice(0, 30);
+    const last30_L = recent60L.slice(30, 60);
+    const first30_H = recent60H.slice(0, 30);
+    const last30_H = recent60H.slice(30, 60);
+    
+    const avgL_first = first30_L.reduce((a,b)=>a+b,0)/30;
+    const avgL_last = last30_L.reduce((a,b)=>a+b,0)/30;
+    const avgH_first = first30_H.reduce((a,b)=>a+b,0)/30;
+    const avgH_last = last30_H.reduce((a,b)=>a+b,0)/30;
+
+    // 只要后半段的重心比前半段偏移了 0.3% 以上，说明通道在倾斜
+    if ((avgL_last - avgL_first) / avgL_first < -0.003) {
+        rejectedByTrend++; return; // 向下倾斜
+    }
+    if ((avgH_last - avgH_first) / avgH_first > 0.003) {
+        rejectedByTrend++; return; // 向上倾斜
+    }
+    
     // === 软箱体极值计算 ===
     let sortH = [...recent60H].sort((a, b) => b - a);
-    let maxH = sortH.slice(2, 7).reduce((a, b) => a + b, 0) / 5; // 剔除前2个，取5个均价
+    let maxH = sortH.slice(2, 7).reduce((a, b) => a + b, 0) / 5; 
 
     let sortL = [...recent60L].sort((a, b) => a - b);
     let minL = sortL.slice(2, 7).reduce((a, b) => a + b, 0) / 5;
     
     const amp = (maxH - minL) / minL * 100;
-    if (amp < 0.3 || amp > 5.0) return; 
+    if (amp < 0.3 || amp > 3.5) return; 
 
     const boxPos = (curPrice - minL) / (maxH - minL); 
     if (boxPos > 0.35 && boxPos < 0.65) return; 
@@ -180,7 +225,8 @@ async function runScan() {
         if(recent60H[i] >= maxH * 0.998) touchTop++;
         if(recent60L[i] <= minL * 1.002) touchBottom++;
     }
-    if(touchTop < 1 || touchBottom < 1) return;
+    // 真横盘，必须反复摩擦
+    if(touchTop < 2 || touchBottom < 2) return; 
 
     // ================= 打分体系 =================
     let scoreHardness = 0;
@@ -197,10 +243,10 @@ async function runScan() {
     else if (boxPos >= 0.65) scoreRR = 40;
 
     const totalScore = scoreHardness + scoreRR;
-    if (totalScore < 70) return; 
+    if (totalScore < 75) return; 
 
     const base = instId.split('-')[0];
-    if (isCooldown(base)) return; // 1小时内推过，直接淘汰
+    if (isCooldown(base)) return; 
 
     let signal = '', stopLoss = 0, tp = 0;
 
@@ -218,7 +264,6 @@ async function runScan() {
     const reward = Math.abs(tp - curPrice);
     const rr = (reward / risk).toFixed(1);
 
-    // 记录到缓存
     updateCache(base);
 
     results.push({
@@ -235,13 +280,10 @@ async function runScan() {
       return;
   }
 
-  // 按分数从高到低排序
   results.sort((a, b) => b.totalScore - a.totalScore);
 
-  // === 【核心更新】：只拿排名第一的那一个 ===
   if (results.length > 0) {
     const best = results[0]; 
-    
     const isLong = best.signal === 'LONG';
     const color = isLong ? '#3fb950' : '#f85149';
     const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
@@ -257,8 +299,8 @@ async function runScan() {
         <div class="info">
           <span>现价:</span> <b>${px(best.curPrice)}</b>
           <span>预估盈亏比:</span> <b class="L">1:${best.rr}</b>
-          <span>综合箱顶(压):</span> <b class="S">${px(best.maxH)}</b>
-          <span>综合箱底(撑):</span> <b class="L">${px(best.minL)}</b>
+          <span>箱顶(压):</span> <b class="S">${px(best.maxH)}</b>
+          <span>箱底(撑):</span> <b class="L">${px(best.minL)}</b>
           <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
           <span>建议止盈:</span> <b class="B">${px(best.tp)}</b>
           <span>触顶次数:</span> <b>${best.touchTop}次</b>
@@ -271,12 +313,11 @@ async function runScan() {
     $('st1').innerText = `✅ 锁定最强王者：${best.base}`;
     $('list-area').style.display = 'block';
     
-    // 响铃提示
     playAlert();
     
   } else {
-    $('st1').innerText = `✅ 扫描完毕，暂无绝佳箱体`;
-    $('out-cards').innerHTML = `<div class="empty">当前全市场都在走单边趋势，或符合标准的箱体已在1小时内推荐过。耐心等待。</div>`;
+    $('st1').innerText = `✅ 扫描完毕，全市场无真横盘`;
+    $('out-cards').innerHTML = `<div class="empty">今日大盘属于单边下跌趋势（已过滤 ${rejectedByTrend} 个假箱体），不要逆势接飞刀，耐心等待企稳！</div>`;
     $('list-area').style.display = 'block';
   }
 }
