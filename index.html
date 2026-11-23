@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 5m 箱体震荡探测 (直连极速版)</title>
+<title>欧易 5m 箱体震荡探测 (盈亏比打分版)</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -13,8 +13,9 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .btn:active{opacity:0.7}
 .b1{background:#ff9f0a;color:#000; box-shadow:0 4px 15px rgba(255,159,10,0.3)}
 .b2{background:#da3633;color:#fff}
+.b3{background:#238636;color:#fff}
 .st{margin:10px 0;padding:10px 12px;background:#161b22;border-radius:8px;font-size:13px;text-align:center; display:flex; justify-content:space-between; align-items:center;}
-.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;margin:8px 0; animation: pop 0.3s ease-out;}
+.card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;margin:8px 0; animation: pop 0.3s ease-out; position:relative;}
 @keyframes pop { 0%{transform:scale(0.95);opacity:0} 100%{transform:scale(1);opacity:1} }
 .t{font-size:17px;font-weight:700; display:flex; justify-content:space-between; align-items:center;}
 .L{color:#3fb950}.S{color:#f85149}.N{color:#8b949e}.Y{color:#ff9f0a}.B{color:#58a6ff}
@@ -25,31 +26,36 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 @keyframes r{to{transform:rotate(360deg)}}
 .empty{color:#8b949e;font-size:13px;padding:20px;text-align:center;border:1px dashed #30363d;border-radius:10px}
 .badge{font-size:12px; padding:2px 8px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
+.timer{color:#79c0ff; font-weight:bold; font-family:monospace;}
+.rank-badge { position: absolute; top: -8px; right: 12px; background: #ff9f0a; color: #000; font-weight: bold; font-size: 12px; padding: 2px 8px; border-radius: 10px; box-shadow: 0 2px 5px rgba(255,159,10,0.5); }
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 箱体震荡探测器</h2>
-  <button class="btn b1" id="f1">🔍 扫描震荡币种 (需直连)</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m 箱体震荡探测器 (实战打分)</h2>
+  <button class="btn b1" id="f1">🔍 扫描最佳盈亏比箱体</button>
+  <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
-    <span id="st1">准备就绪</span>
+    <span id="st1">准备就绪 (请确保网络直连)</span>
     <span id="percent" style="color:#ff9f0a; font-weight:bold;">0%</span>
   </div>
+  <div class="st" style="margin-top:5px; background:transparent; border:1px solid #2d3748; justify-content:center;">
+    下次扫描倒计时: <span class="timer" id="countdown">--:--</span>
+  </div>
   <div id="err-msg" style="display:none; margin-top:10px;">
-      <div class="btn b2" onclick="location.reload()">网络请求失败 (请检查梯子是否全局)</div>
+      <div class="btn b2" onclick="location.reload()">网络请求失败 (请检查梯子)</div>
   </div>
 </div>
 
 <div id="result-area">
   <div class="win" id="list-area" style="display:none;">
-    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 策略：靠近箱底做多，靠近箱顶做空，跌破/突破箱体严格止损。</div>
+    <div style="font-size:14px; color:#8b949e; margin-bottom:10px;">💡 排名第1的即为当前盈亏比最高、箱体最硬的最佳入场点。</div>
     <div id="out-cards"></div>
   </div>
 </div>
 
 <script>
-// 专属 100 币种池
 const FIXED_COINS = [
   "BTCUSDT", "ETHUSDT", "SOXLUSDT", "SNDKUSDT", "ZECUSDT", "SOLUSDT", "NVDAUSDT", "XAUUSDT", "ANTUSDT", "MMTUSDT",
   "MUUSDT", "XRPUSDT", "SKHYNIXUSDT", "SOXSUSDT", "HYPEUSDT", "PIEVERSEUSDT", "BREVUSDT", "XAGUSDT", "KORUUSDT", "DOGEUSDT",
@@ -65,8 +71,21 @@ const FIXED_COINS = [
 
 const $=i=>document.getElementById(i);
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(6);
+let audioCtx = null;
+let autoTimer = null;
+let isScanning = false;
 
-// 纯净直连请求，不带任何 CORS 代理
+function playAlert(){
+  if(!audioCtx) return;
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  gain.gain.setValueAtTime(1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+  osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+}
+
 async function fetchOKXDirect(path) {
     const url = 'https://www.okx.com' + path;
     const ctrl = new AbortController();
@@ -86,7 +105,6 @@ async function fetchOKXDirect(path) {
 
 function parseK(d){
   const o=[],h=[],l=[],c=[];
-  // 只拿已收盘的 K 线
   const closedData = d.filter(x => x[8] === '1');
   const data=[...closedData].reverse();
   for(const x of data){
@@ -96,7 +114,10 @@ function parseK(d){
 }
 
 async function runScan() {
-  $('st1').innerHTML = '<span class="sp"></span>直连拉取数据中...';
+  if (isScanning) return;
+  isScanning = true;
+  
+  $('st1').innerHTML = '<span class="sp"></span>并发拉取 60 根 5m 数据中...';
   $('err-msg').style.display = 'none';
   $('list-area').style.display = 'none';
   
@@ -106,13 +127,12 @@ async function runScan() {
   let done = 0;
   let failCount = 0;
 
-  // 瞬间并发发出请求
   const promises = targetInstIds.map(async (instId) => {
-    const kr = await fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=45`);
+    const kr = await fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=65`);
     done++;
     $('percent').innerText = `${Math.round((done/100)*100)}%`;
     
-    if (kr.err || !kr.data || kr.data.length < 40) {
+    if (kr.err || !kr.data || kr.data.length < 60) {
         failCount++;
         return;
     }
@@ -120,30 +140,50 @@ async function runScan() {
     const kp = parseK(kr.data);
     const { c, h, l } = kp;
     
-    const recent40 = { c: c.slice(-40), h: h.slice(-40), l: l.slice(-40) };
-    const curPrice = recent40.c[recent40.c.length - 1];
+    const recent60 = { c: c.slice(-60), h: h.slice(-60), l: l.slice(-60) };
+    const curPrice = recent60.c[recent60.c.length - 1];
     
-    const maxH = Math.max(...recent40.h);
-    const minL = Math.min(...recent40.l);
+    const maxH = Math.max(...recent60.h);
+    const minL = Math.min(...recent60.l);
     
+    // 过滤死水和单边极端行情
     const amp = (maxH - minL) / minL * 100;
-    // 振幅过滤：大于0.3%，小于5%
     if (amp < 0.3 || amp > 5.0) return; 
 
     const boxPos = (curPrice - minL) / (maxH - minL); 
-    // 价格必须处在边缘（小于35%或大于65%）
+    // 价格在箱体中间，盈亏比极差，直接淘汰
     if (boxPos > 0.35 && boxPos < 0.65) return; 
 
-    // 极值碰触过滤
+    // 统计碰触次数
     let touchTop = 0, touchBottom = 0;
-    for(let i=0; i<40; i++) {
-        if(recent40.h[i] >= maxH * 0.998) touchTop++;
-        if(recent40.l[i] <= minL * 1.002) touchBottom++;
+    for(let i=0; i<60; i++) {
+        if(recent60.h[i] >= maxH * 0.998) touchTop++;
+        if(recent60.l[i] <= minL * 1.002) touchBottom++;
     }
+    // 至少要碰过一次顶和底
     if(touchTop < 1 || touchBottom < 1) return;
 
+    // ================= 核心打分体系 =================
+    let scoreHardness = 0; // 硬度分 (最高40分)
+    // 触碰次数越多，得分越高（每次得4分，最高20分）
+    scoreHardness += Math.min(20, (touchTop + touchBottom) * 4);
+    // 振幅在 0.5% - 2% 之间，说明窄幅震荡，最稳（加20分）
+    if (amp >= 0.5 && amp <= 2.0) scoreHardness += 20;
+    else if (amp > 2.0 && amp <= 3.5) scoreHardness += 10;
+
+    let scoreRR = 0; // 盈亏比分 (最高60分)
+    // 越贴近边缘，得分越高
+    if (boxPos <= 0.1) scoreRR = 60; // 极度贴底做多，盈亏比最好
+    else if (boxPos <= 0.2) scoreRR = 50;
+    else if (boxPos <= 0.35) scoreRR = 40;
+    else if (boxPos >= 0.9) scoreRR = 60; // 极度贴顶做空
+    else if (boxPos >= 0.8) scoreRR = 50;
+    else if (boxPos >= 0.65) scoreRR = 40;
+
+    const totalScore = scoreHardness + scoreRR;
+    if (totalScore < 70) return; // 低于 70 分的不要
+
     const base = instId.split('-')[0];
-    
     let signal = '';
     let stopLoss = 0;
     let tp = 0;
@@ -158,57 +198,127 @@ async function runScan() {
       tp = minL; 
     }
 
+    // 计算真实的盈亏比
+    const risk = Math.abs(curPrice - stopLoss);
+    const reward = Math.abs(tp - curPrice);
+    const rr = (reward / risk).toFixed(1);
+
     results.push({
-      base, curPrice, maxH, minL, amp, signal, stopLoss, tp
+      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, totalScore, touchTop, touchBottom, rr
     });
   });
 
   await Promise.all(promises);
+  isScanning = false;
   
-  // 100个全失败，说明网络没通
   if (failCount === 100) {
       $('st1').innerText = `❌ 网络全盘失败`;
       $('err-msg').style.display = 'block';
       return;
   }
 
-  results.sort((a, b) => a.amp - b.amp);
+  // 按总分降序排列
+  results.sort((a, b) => b.totalScore - a.totalScore);
 
   if (results.length > 0) {
     let html = '';
-    results.forEach(x => {
+    results.forEach((x, index) => {
       const isLong = x.signal === 'LONG';
       const color = isLong ? '#3fb950' : '#f85149';
       const dirTxt = isLong ? '箱底做多 🚀' : '箱顶做空 🌊';
+      const scoreColor = x.totalScore >= 90 ? '#3fb950' : '#ff9f0a';
       
+      // 前3名显示金/银/铜牌
+      let rankHtml = '';
+      if(index === 0) rankHtml = `<div class="rank-badge">🏆 最佳盈亏比</div>`;
+      else if(index === 1) rankHtml = `<div class="rank-badge" style="background:#c0c0c0;">🥈 亚军</div>`;
+      else if(index === 2) rankHtml = `<div class="rank-badge" style="background:#cd7f32;">🥉 季军</div>`;
+
       html += `
         <div class="card">
-          <div class="t">
-            <span>${x.base}</span>
+          ${rankHtml}
+          <div class="t" style="margin-top:5px;">
+            <span>${x.base} <span class="badge" style="border-color:${scoreColor}; color:${scoreColor}">${x.totalScore}分</span></span>
             <span class="badge" style="color:${color}">${dirTxt}</span>
           </div>
           <div class="info">
             <span>现价:</span> <b>${px(x.curPrice)}</b>
-            <span>振幅:</span> <b>${x.amp.toFixed(2)}%</b>
-            <span>箱顶(压力):</span> <b class="S">${px(x.maxH)}</b>
-            <span>箱底(支撑):</span> <b class="L">${px(x.minL)}</b>
+            <span>预估盈亏比:</span> <b class="L">1:${x.rr}</b>
+            <span>箱顶(压):</span> <b class="S">${px(x.maxH)}</b>
+            <span>箱底(撑):</span> <b class="L">${px(x.minL)}</b>
             <span>建议止损:</span> <b class="Y">${px(x.stopLoss)}</b>
             <span>建议止盈:</span> <b class="B">${px(x.tp)}</b>
+            <span>触顶次数:</span> <b>${x.touchTop}次</b>
+            <span>触底次数:</span> <b>${x.touchBottom}次</b>
           </div>
         </div>
       `;
     });
     $('out-cards').innerHTML = html;
-    $('st1').innerText = `✅ 发现 ${results.length} 个标准箱体`;
+    $('st1').innerText = `✅ 发现 ${results.length} 个高分箱体`;
     $('list-area').style.display = 'block';
+    
+    // 如果出现 90 分以上的极品，直接响铃
+    if(results[0].totalScore >= 90) playAlert();
+    
   } else {
-    $('st1').innerText = `✅ 扫描完毕，全市场都在走单边`;
-    $('out-cards').innerHTML = `<div class="empty">最近 40 根 5m 线中，所有币都在走趋势，没有卡在边缘的震荡箱体。</div>`;
+    $('st1').innerText = `✅ 扫描完毕，暂无高分箱体`;
+    $('out-cards').innerHTML = `<div class="empty">当前全市场都处于趋势爆发或无序震荡中，没有符合高盈亏比的完美箱体。</div>`;
     $('list-area').style.display = 'block';
   }
 }
 
-$('f1').onclick = runScan;
+// 定时器
+let countdownTimer = null;
+function startAutoScan() {
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  
+  $('f_auto').innerText = '🛑 停止自动巡航';
+  $('f_auto').classList.replace('b3', 'b2');
+  
+  const nextScan = () => {
+    const now = Date.now();
+    const next5m = Math.ceil(now / 300000) * 300000 + 2000;
+    
+    if(countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+        const left = Math.max(0, next5m - Date.now());
+        const m = Math.floor(left / 60000);
+        const s = Math.floor((left % 60000) / 1000);
+        $('countdown').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        
+        if (left <= 0) {
+            clearInterval(countdownTimer);
+            runScan();
+            if(autoTimer) nextScan();
+        }
+    }, 1000);
+    autoTimer = true;
+  };
+  
+  runScan();
+  nextScan();
+}
+
+$('f1').onclick = () => {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    runScan();
+};
+
+$('f_auto').onclick = () => {
+  if(autoTimer) {
+      autoTimer = null;
+      clearInterval(countdownTimer);
+      $('f_auto').innerText = '⏱️ 开启 5m 自动巡航';
+      $('f_auto').classList.replace('b2', 'b3');
+      $('countdown').innerText = '--:--';
+      $('st1').innerText = '自动巡航已停止';
+  } else {
+      startAutoScan();
+  }
+};
 </script>
 </body>
 </html>
