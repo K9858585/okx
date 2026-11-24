@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 15m极致微箱体+极短止盈</title>
+<title>欧易 15m EMA5-20 横穿箱体 · 最佳入场</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -28,13 +28,16 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .badge{font-size:14px; padding:4px 10px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
 .timer{color:#79c0ff; font-weight:bold; font-family:monospace;}
 .crown-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #ff9f0a, #ffb347); color: #000; font-weight: bold; font-size: 14px; padding: 4px 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(255,159,10,0.4); white-space: nowrap;}
+.ema-tag { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600; margin-left:6px; }
+.ema-fast { background:#1f3a2b; color:#3fb950; border:1px solid #3fb950; }
+.ema-slow { background:#3a1f1f; color:#f85149; border:1px solid #f85149; }
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 15m极微箱体 + 极短止盈</h2>
-  <button class="btn b1" id="f1">🔍 寻找极微完美箱体</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 15m EMA5-20 横穿箱体</h2>
+  <button class="btn b1" id="f1">🔍 寻找EMA横穿箱体</button>
   <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
     <span id="st1">准备就绪</span>
@@ -72,19 +75,19 @@ let autoTimer = null;
 let isScanning = false;
 
 function getCache() {
-    const raw = localStorage.getItem('okx_micro_box_cache');
+    const raw = localStorage.getItem('okx_ema_box_cache');
     return raw ? JSON.parse(raw) : {};
 }
 function updateCache(coinName) {
     const cache = getCache();
     cache[coinName] = Date.now();
-    localStorage.setItem('okx_micro_box_cache', JSON.stringify(cache));
+    localStorage.setItem('okx_ema_box_cache', JSON.stringify(cache));
 }
 function isCooldown(coinName) {
     const cache = getCache();
     const lastTime = cache[coinName];
     if (!lastTime) return false;
-    return (Date.now() - lastTime) < 3600000;
+    return (Date.now() - lastTime) < 3600000; // 1小时冷却
 }
 
 function playAlert(){
@@ -125,11 +128,144 @@ function parseK(d){
   return{o,h,l,c};
 }
 
+// 计算EMA序列 (简单迭代)
+function calcEMA(closes, period) {
+    if (closes.length < period) return [];
+    const k = 2 / (period + 1);
+    const ema = [];
+    let sum = 0;
+    for (let i = 0; i < period; i++) sum += closes[i];
+    ema.push(sum / period); // 第一个EMA = SMA
+    for (let i = period; i < closes.length; i++) {
+        ema.push(closes[i] * k + ema[ema.length - 1] * (1 - k));
+    }
+    // 对齐：EMA 数组的长度 = closes.length - period + 1
+    // 为了与 closes 索引对齐（前面补 NaN），我们返回时补齐
+    const padded = new Array(period - 1).fill(NaN).concat(ema);
+    return padded;
+}
+
+// 核心：检测EMA5/20在N根内反复横穿，且高低点齐平（箱体）
+function detectEmaCrossBox(k15m) {
+    const closes = k15m.c;
+    const highs = k15m.h;
+    const lows = k15m.l;
+    const n = closes.length;
+    if (n < 30) return null; // 至少30根才能算EMA20+足够的横穿区间
+
+    const ema5 = calcEMA(closes, 5);
+    const ema20 = calcEMA(closes, 20);
+
+    // 从最后K线往前搜索：尝试不同的箱体长度（10~25根），寻找满足条件的最大/最佳区间
+    // 条件：区间内EMA5与EMA20交叉次数 >= 3 (即至少2次以上来回穿越，形成横穿)
+    // 且区间内高点整体齐平（高点极差/振幅 < 0.2），低点整体齐平
+    // 并且区间内最高与最低的振幅在 0.8% ~ 3.5% 之间（比之前的微箱体放宽一点，因为EMA横穿本身需要一定波动）
+
+    const maxLen = Math.min(25, n - 20); // 确保EMA20有值
+    let bestBox = null;
+
+    // 从较长的区间开始找，找到第一个就锁定（更稳定），也可以遍历取最优
+    // 我们遍历所有可能长度，记录满足条件且振幅较小的最佳箱体
+    for (let len = 10; len <= maxLen; len++) {
+        const startIdx = n - len;
+        const winHighs = highs.slice(startIdx);
+        const winLows = lows.slice(startIdx);
+        const winEma5 = ema5.slice(startIdx);
+        const winEma20 = ema20.slice(startIdx);
+        const winCloses = closes.slice(startIdx);
+
+        // 检查EMA20是否有值（不能有NaN）
+        if (winEma20.some(v => isNaN(v)) || winEma5.some(v => isNaN(v))) continue;
+
+        // 1. 计算交叉次数（EMA5上穿/下穿EMA20）
+        let crossCount = 0;
+        let prevRelation = null; // 1: ema5 > ema20, -1: ema5 < ema20
+        for (let i = 0; i < len; i++) {
+            const rel = winEma5[i] > winEma20[i] ? 1 : -1;
+            if (prevRelation !== null && rel !== prevRelation) crossCount++;
+            prevRelation = rel;
+        }
+        // 需要至少2次交叉（即来回横穿，至少一个完整的上下）
+        if (crossCount < 3) continue; // 至少3次穿越才叫“横穿”（上-下-上 或 下-上-下）
+
+        // 2. 高低点齐平检查
+        const maxH = Math.max(...winHighs);
+        const minL = Math.min(...winLows);
+        const range = maxH - minL;
+        if (range <= 0) continue;
+        const amp = range / minL * 100; // 振幅%
+
+        // 振幅范围：0.8% ~ 3.5%（EMA横穿需要一定空间）
+        if (amp < 0.8 || amp > 3.5) continue;
+
+        // 高点齐平：最高价与次高、第三高差距小
+        const sortedH = [...winHighs].sort((a,b)=>b-a);
+        const diffH = sortedH[0] - sortedH[2];
+        if (diffH / range > 0.25) continue; // 高点极差不超过箱体的25%
+
+        // 低点齐平
+        const sortedL = [...winLows].sort((a,b)=>a-b);
+        const diffL = sortedL[2] - sortedL[0];
+        if (diffL / range > 0.25) continue;
+
+        // 3. 上下影线不能太过分（可选：K线实体不太大，保证是震荡）
+        // 简单检查：区间内K线平均实体/振幅 不太大，但可以先跳过
+
+        // 4. 最佳入场点判断：当前价格靠近箱底（做多）或箱顶（做空）
+        // 同时需要EMA5与EMA20刚刚发生交叉或即将交叉？我们结合当前位置
+        const curPrice = winCloses[winCloses.length - 1];
+        const curEma5 = winEma5[winEma5.length - 1];
+        const curEma20 = winEma20[winEma20.length - 1];
+
+        // 判断多空方向：如果价格靠近箱底，且EMA5 > EMA20（短期向上），做多
+        // 如果价格靠近箱顶，且EMA5 < EMA20（短期向下），做空
+        // 这里我们采用价格靠近箱底/顶作为主要依据，EMA关系作为辅助确认
+
+        let signal = null;
+        // 做多条件：价格贴近箱底（下方0.5%以内），并且EMA5 > EMA20 (金叉状态) 或刚刚金叉
+        if (curPrice <= minL * 1.005 && curPrice >= minL * 0.995) {
+            // 要求EMA5 >= EMA20 或者 交叉刚发生
+            if (curEma5 >= curEma20 || (curEma5 > curEma20 && (curEma5 - curEma20) / curEma20 < 0.001)) {
+                signal = 'LONG';
+            }
+        }
+        // 做空条件：价格贴近箱顶（上方0.5%以内），并且EMA5 < EMA20
+        if (curPrice >= maxH * 0.995 && curPrice <= maxH * 1.005) {
+            if (curEma5 <= curEma20) {
+                signal = 'SHORT';
+            }
+        }
+
+        if (!signal) continue;
+
+        // 计算得分：交叉次数越多越好，振幅越小越好，高低点越齐平越好
+        let score = 0;
+        score += Math.min(crossCount * 10, 40); // 交叉贡献最多40
+        score += Math.max(0, 100 - amp * 25); // 振幅越小分越高（振幅1% -> 75分，2% ->50分）
+        // 齐平度加分
+        const flatScore = 100 - (diffH/range + diffL/range) * 100;
+        score += Math.max(0, flatScore * 0.3);
+        score = Math.round(Math.min(score, 100));
+
+        // 记录最佳（得分最高）
+        if (!bestBox || score > bestBox.score) {
+            bestBox = {
+                len, startIdx, maxH, minL, amp, crossCount, signal, score,
+                curPrice, minL, maxH,
+                ema5: curEma5, ema20: curEma20,
+                winHighs, winLows, winCloses
+            };
+        }
+    }
+
+    return bestBox;
+}
+
 async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>寻找极微完美箱体...';
+  $('st1').innerHTML = '<span class="sp"></span>寻找EMA横穿箱体...';
   $('list-area').style.display = 'none';
   
   const targetInstIds = FIXED_COINS.map(c => c.replace('USDT', '-USDT-SWAP'));
@@ -138,7 +274,7 @@ async function runScan() {
 
   const promises = targetInstIds.map(async (instId) => {
     const [res15m, res5m] = await Promise.all([
-        fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=15m&limit=40`),
+        fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=15m&limit=50`),
         fetchOKXDirect(`/api/v5/market/candles?instId=${instId}&bar=5m&limit=15`) 
     ]);
     
@@ -151,86 +287,35 @@ async function runScan() {
     const k15m = parseK(res15m.data);
     const k5m = parseK(res5m.data);
 
-    // === 1. 寻找【最小完美箱体】 (10~20根) ===
-    let bestBox = null;
-    let maxSearch = Math.min(20, k15m.c.length);
-    
-    // 从 10 根开始试探，一旦找到完美平顺的，立刻锁定，不再往后找！
-    for (let len = 10; len <= maxSearch; len++) {
-        const winH = k15m.h.slice(-len);
-        const winL = k15m.l.slice(-len);
-        
-        const maxH = Math.max(...winH);
-        const minL = Math.min(...winL);
-        const amp = (maxH - minL) / minL * 100;
-        
-        // 【核心收紧】：振幅必须极小！0.8% ~ 2.0% 之间
-        if (amp < 0.8 || amp > 2.0) continue;
+    // 核心检测：EMA横穿箱体
+    const box = detectEmaCrossBox(k15m);
+    if (!box) return;
 
-        // 平整度检查：前三高与前三低的差距不能太大（防长针）
-        let sortedH = [...winH].sort((a, b) => b - a);
-        let sortedL = [...winL].sort((a, b) => a - b);
-        let diffH = sortedH[0] - sortedH[2];
-        let diffL = sortedL[2] - sortedL[0];
-        
-        // 极差占比不能超过 20%，保证极致的平顺
-        if (diffH / (maxH - minL) > 0.2 || diffL / (maxH - minL) > 0.2) continue;
+    const { signal, maxH, minL, amp, crossCount, score, curPrice, len } = box;
 
-        // 触碰次数：上下各至少 2 次
-        let touchTop = 0, touchBottom = 0;
-        for(let i=0; i<len; i++) {
-            if(winH[i] >= maxH * 0.998) touchTop++;
-            if(winL[i] <= minL * 1.002) touchBottom++;
-        }
-        if (touchTop < 2 || touchBottom < 2) continue;
-
-        // 找到第一个符合条件的极微箱体，直接锁定
-        bestBox = { len, maxH, minL, amp };
-        break; 
-    }
-
-    if (!bestBox) return; 
-
-    const { len, maxH, minL, amp } = bestBox;
-    
-    // === 2. 5m 高抛低吸判定 ===
-    const last5mK = k5m.c.length - 1;
-    const curClose = k5m.c[last5mK];
-    const curOpen = k5m.o[last5mK];
-    const curPrice = curClose;
-
-    let signal = null;
-
-    // 做多：贴近箱底
-    if (curPrice <= minL * 1.002 && curPrice >= minL * 0.998) {
-        const bodyDrop = (curOpen - curClose) / curOpen;
-        if (bodyDrop < 0.015) signal = 'LONG';
-    }
-    // 做空：贴近箱顶
-    else if (curPrice >= maxH * 0.998 && curPrice <= maxH * 1.002) {
-        const bodyRise = (curClose - curOpen) / curOpen;
-        if (bodyRise < 0.015) signal = 'SHORT';
-    }
-
-    if (!signal) return;
+    // 用5m当前价格做二次确认（防止信号延迟，但15m收盘价是主要的）
+    const last5mClose = k5m.c[k5m.c.length - 1];
+    // 如果5m价格偏离箱体太远，则放弃
+    if (signal === 'LONG' && last5mClose < minL * 0.99) return;
+    if (signal === 'SHORT' && last5mClose > maxH * 1.01) return;
 
     const base = instId.split('-')[0];
     if (isCooldown(base)) return; 
 
-    // === 3. 【核心修改】：极短止盈止损 ===
+    // === 止盈止损设置（EMA箱体策略） ===
     let stopLoss = 0, tp = 0;
     const boxHeight = maxH - minL;
     
     if (signal === 'LONG') {
-        // 止损：箱底外 0.3%（极小防守）
-        stopLoss = minL * 0.997; 
-        // 止盈：箱体高度的 70% 处（吃鱼身，不贪箱顶）
-        tp = minL + boxHeight * 0.7; 
+        // 止损：箱底外0.4%
+        stopLoss = minL * 0.996;
+        // 止盈：箱体高度的70%处（从箱底起算）
+        tp = minL + boxHeight * 0.7;
     } else {
-        // 止损：箱顶外 0.3%
-        stopLoss = maxH * 1.003; 
-        // 止盈：箱体高度的 70% 处
-        tp = maxH - boxHeight * 0.7; 
+        // 止损：箱顶外0.4%
+        stopLoss = maxH * 1.004;
+        // 止盈：箱体高度的70%处（从箱顶往下）
+        tp = maxH - boxHeight * 0.7;
     }
 
     const risk = Math.abs(curPrice - stopLoss);
@@ -238,14 +323,10 @@ async function runScan() {
     let rr = 0;
     if (risk > 0) rr = (reward / risk).toFixed(1);
 
-    // === 4. 打分 ===
-    // 越平顺，振幅越小，分越高
-    let score = Math.round(100 - (amp / 2.0) * 20); 
-    
     updateCache(base);
 
     allValidSignals.push({
-      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, rr, finalScore: score, len
+      base, curPrice, maxH, minL, amp, signal, stopLoss, tp, rr, finalScore: score, len, crossCount
     });
   });
 
@@ -262,9 +343,13 @@ async function runScan() {
 
     let html = `
       <div class="card">
-        <div class="crown-badge">👑 极微完美箱体</div>
+        <div class="crown-badge">👑 EMA5-20 横穿箱体</div>
         <div class="t" style="margin-top:10px;">
-          <span>${best.base} <span class="badge" style="color:${color}; border-color:${color}; font-weight:bold;">${dirTxt}</span></span>
+          <span>${best.base} 
+            <span class="badge" style="color:${color}; border-color:${color}; font-weight:bold;">${dirTxt}</span>
+            <span class="ema-tag ema-fast">EMA5</span>
+            <span class="ema-tag ema-slow">EMA20</span>
+          </span>
           <span class="badge" style="color:#ff9f0a; border-color:#ff9f0a;">${best.finalScore}分</span>
         </div>
         <div class="info">
@@ -274,6 +359,7 @@ async function runScan() {
           <span>箱底:</span> <b class="L">${px(best.minL)}</b>
           <span>震荡振幅:</span> <b class="N">${best.amp.toFixed(2)}%</b>
           <span>箱体根数:</span> <b class="N">${best.len} 根</b>
+          <span>EMA交叉次数:</span> <b class="Y">${best.crossCount} 次</b>
           <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
           <span>建议止盈:</span> <b class="B">${px(best.tp)} (吃70%)</b>
         </div>
@@ -287,8 +373,8 @@ async function runScan() {
     playAlert();
     
   } else {
-    $('st1').innerText = `✅ 扫描完毕，暂无极微箱体`;
-    $('out-cards').innerHTML = `<div class="empty" style="margin-top:15px;">全市场都在走单边，或者近期没有振幅小于2%且极度平顺的微箱体。耐心等待！</div>`;
+    $('st1').innerText = `✅ 扫描完毕，暂无EMA横穿箱体`;
+    $('out-cards').innerHTML = `<div class="empty" style="margin-top:15px;">当前没有满足EMA5/20横穿且高低点齐平的箱体。耐心等待！</div>`;
     $('list-area').style.display = 'block';
   }
 }
