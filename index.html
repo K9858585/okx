@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 日线定趋势 · 1h支撑压力 · 15m入场</title>
+<title>欧易 日线定趋势 · 1h支撑压力 · 15m入场（防妖币）</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:720px;margin:0 auto}
@@ -91,15 +91,16 @@ let timerOn=false;
 let timerHandle=null, countdownHandle=null;
 let isScanningDaily=false, isScanningEntry=false;
 
-// ============ 全局状态 ============
+// 新增：交易对基础信息（用于过滤新币）
+let instrumentListMap = {}; 
+
 const state = {
-  dailyResults: [],   // 日线通过列表（含1h分析）
-  entryMap: {},       // base -> 15m入场信息
+  dailyResults: [],
+  entryMap: {},
   scanDate: '',
   scanTime: 0
 };
 
-// ============ 工具函数 ============
 function todayStr(){
   const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -147,7 +148,6 @@ function calcEMA(closes,period){
   for(let i=period;i<closes.length;i++) ema.push(closes[i]*k+ema[ema.length-1]*(1-k));
   return new Array(period-1).fill(NaN).concat(ema);
 }
-// 并发限制器
 async function batchFetch(tasks, concurrency=8){
   const results=new Array(tasks.length).fill(null);
   let idx=0;
@@ -161,24 +161,46 @@ async function batchFetch(tasks, concurrency=8){
   return results;
 }
 
+// ============ 获取全平台交易对信息（判断上市时间，防新币） ============
+async function loadInstrumentsInfo() {
+    if (Object.keys(instrumentListMap).length > 0) return;
+    const res = await fetchOKX('/api/v5/public/instruments?instType=SWAP');
+    if (res.err || !res.data) return;
+    res.data.forEach(item => {
+        instrumentListMap[item.instId] = {
+            listTime: parseInt(item.listTime) || 0
+        };
+    });
+}
+
 // ============ 日线分析 ============
-// 返回：方向、站稳根数、影线质量、活跃度、评分
-function analyzeDaily(kd){
+function analyzeDaily(kd, instId){
+  // 过滤1：上市不足45天的新币（PIPPIN这类往往是新币）
+  const info = instrumentListMap[instId];
+  if (info && info.listTime) {
+      const daysOnline = (Date.now() - info.listTime) / (1000 * 3600 * 24);
+      if (daysOnline < 45) return null;
+  }
+
   const {o,h,l,c}=kd;
   const n=c.length;
   if(n<25) return null;
+  
+  // 过滤2：过滤单日剧烈波动的“妖币”（最近5天如果有单日振幅超过25%，直接剔除）
+  for (let i = Math.max(0, n - 5); i < n; i++) {
+      if (c[i] > 0 && (h[i] - l[i]) / c[i] > 0.25) return null;
+  }
+
   const ema5=calcEMA(c,5);
   const ema20=calcEMA(c,20);
   if(isNaN(ema20[n-1])||isNaN(ema5[n-1])) return null;
 
   const lastE5=ema5[n-1], lastE20=ema20[n-1], lastC=c[n-1];
-  // 方向判断：EMA5>EMA20 且价格在两者之上→多；反之空
   let direction=null;
   if(lastE5>lastE20 && lastC>lastE5 && lastC>lastE20) direction='LONG';
   else if(lastE5<lastE20 && lastC<lastE5 && lastC<lastE20) direction='SHORT';
   if(!direction) return null;
 
-  // 连续站稳根数
   let streak=0;
   for(let i=n-1;i>=0;i--){
     if(isNaN(ema5[i])||isNaN(ema20[i])) break;
@@ -188,7 +210,6 @@ function analyzeDaily(kd){
   }
   if(streak<3) return null;
 
-  // 影线质量：最近N根（最多10根）平均实体占比，越大影线越短
   const cnt=Math.min(streak,10);
   const st=n-cnt;
   let sumBodyRatio=0;
@@ -199,14 +220,12 @@ function analyzeDaily(kd){
   }
   const avgBodyRatio=sumBodyRatio/cnt;
 
-  // 活跃度：最近10日平均振幅%
   const actCnt=Math.min(n,10);
   const ast=n-actCnt;
   let sumAmp=0;
   for(let i=ast;i<n;i++) sumAmp += (h[i]-l[i])/c[i]*100;
   const avgAmp=sumAmp/actCnt;
 
-  // 评分
   const streakScore=Math.min(streak*5,50);
   const shadowScore=avgBodyRatio*25;
   let actScore;
@@ -215,6 +234,10 @@ function analyzeDaily(kd){
   else if(avgAmp<=6) actScore=15+(avgAmp-2)/4*10;
   else if(avgAmp<=10) actScore=25-(avgAmp-6)/4*10;
   else actScore=Math.max(0,15-(avgAmp-10)*2);
+  
+  // 过滤3：振幅过低或过高直接降级或剔除
+  if (avgAmp > 12) return null;
+
   const score=Math.round(streakScore+shadowScore+actScore);
 
   return {
@@ -240,11 +263,8 @@ function findSR(k1h){
     if(isH) swingHighs.push(h[i]);
     if(isL) swingLows.push(l[i]);
   }
-  // 支撑：低于当前价的摆动低点，从高到低
   const supports=swingLows.filter(x=>x<curC).sort((a,b)=>b-a).slice(0,3);
-  // 压力：高于当前价的摆动高点，从低到高
   const resistances=swingHighs.filter(x=>x>curC).sort((a,b)=>a-b).slice(0,3);
-  // 兜底：用最近24根的高低点
   if(supports.length===0){
     const rl=Math.min(...l.slice(-24));
     if(rl<curC) supports.push(rl);
@@ -266,7 +286,6 @@ function checkEntry(k15m, direction, sr){
   const curC=c[n-1];
   const curE5=ema5[n-1], curE9=ema9[n-1];
 
-  // 最近3根是否刚金叉/死叉
   let crossFresh=false;
   for(let i=Math.max(1,n-3);i<n;i++){
     const prevUp=ema5[i-1]>ema9[i-1];
@@ -312,10 +331,13 @@ async function scanDaily(force=false){
   isScanningDaily=true;
   $('btnScan').disabled=true;
   $('btnRescan').disabled=true;
-  $('progress').innerHTML='<span class="sp"></span>日线扫描中...';
+  $('progress').innerHTML='<span class="sp"></span>加载基础信息过滤妖币...';
   $('scanStatus').innerText='扫描中';
 
-  // 先做日线阶段
+  // 先获取基础信息（用于过滤新币）
+  await loadInstrumentsInfo();
+
+  $('progress').innerHTML='<span class="sp"></span>日线扫描中...';
   const targets=FIXED_COINS.map(c=>c.replace('USDT','-USDT-SWAP'));
   let done=0;
   const tasks=targets.map(inst=>(async()=>{
@@ -323,19 +345,18 @@ async function scanDaily(force=false){
     done++;
     $('progress').innerText=`日线 ${done}/${targets.length} (${Math.round(done/targets.length*100)}%)`;
     if(res.err||!res.data||res.data.length<25) return null;
+    
     const kd=parseK(res.data);
-    const a=analyzeDaily(kd);
+    const a=analyzeDaily(kd, inst);
     if(!a) return null;
     return {base:inst.split('-')[0], instId:inst, ...a};
   }));
   const dailyRaw=await batchFetch(tasks,8);
   const dailyPass=dailyRaw.filter(Boolean).sort((a,b)=>b.score-a.score);
 
-  // 只有评分≥40的进入下一步
   const filtered=dailyPass.filter(x=>x.score>=40);
   $('progress').innerHTML=`<span class="sp"></span>1h支撑压力分析 (${filtered.length}个)...`;
 
-  // 1h阶段（为每个通过者取1h找支撑压力）
   let done1=0;
   const tasks1=filtered.map(item=>(async()=>{
     const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=1H&limit=100`);
@@ -348,15 +369,13 @@ async function scanDaily(force=false){
   }));
   const withSR=await batchFetch(tasks1,6);
 
-  // 保存
   state.dailyResults=withSR;
   state.scanDate=todayStr();
   state.scanTime=Date.now();
-  localStorage.setItem('okx_daily_scan_v3',JSON.stringify({
+  localStorage.setItem('okx_daily_scan_v4',JSON.stringify({
     date:state.scanDate, time:state.scanTime, results:state.dailyResults
   }));
 
-  // 立即做一次15m入场分析
   await scanEntry();
 
   $('progress').innerText='完成';
@@ -393,7 +412,7 @@ async function scanEntry(){
 // ============ 渲染 ============
 function render(){
   if(state.dailyResults.length===0){
-    $('ranking').innerHTML='<div class="empty">暂无扫描结果。</div>';
+    $('ranking').innerHTML='<div class="empty">暂无符合条件的安全币种（已过滤上市不足45天及极端波动妖币）。</div>';
     return;
   }
   let html='';
@@ -506,7 +525,7 @@ window.toggleCard=function(base){
 // ============ 缓存恢复 ============
 function restoreCache(){
   try{
-    const raw=localStorage.getItem('okx_daily_scan_v3');
+    const raw=localStorage.getItem('okx_daily_scan_v4');
     if(!raw) return false;
     const cached=JSON.parse(raw);
     if(cached.date!==todayStr()) return false;
@@ -528,7 +547,6 @@ function startTimer(){
   $('btnTimer').innerText='🛑 停止 15m 定时扫描';
   $('btnTimer').classList.replace('b3','b2');
   scheduleNext();
-  // 立即扫一次
   scanEntry();
 }
 function stopTimer(){
@@ -580,11 +598,9 @@ $('btnTimer').onclick=()=>{
 (function init(){
   if(restoreCache()){
     $('scanStatus').innerText=`今日已扫描 (${state.dailyResults.length}个通过)`;
-    $('scanDate').innerText='';
     $('btnScan').style.display='none';
     $('btnRescan').style.display='block';
     $('progress').innerText='读取今日缓存';
-    // 恢复时立即跑一次15m入场，并渲染
     scanEntry().then(()=>render());
   } else {
     $('scanStatus').innerText='今日未扫描';
