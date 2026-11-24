@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 1h定趋势 · 15m回调 · 5m扣扳机</title>
+<title>欧易 1h定趋势 · 5m回调扣扳机</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:720px;margin:0 auto}
@@ -60,10 +60,10 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1h定趋势 · 15m回调 · 5m扣扳机</h2>
-  <div class="warn-bar">📢 提示：请在设置中允许本页面“发送通知”，并在浏览器菜单选择“添加到主屏幕”。</div>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1h定趋势 · 5m回调扣扳机</h2>
+  <div class="warn-bar">📢 提示：请保持页面前台运行或添加到主屏幕，并允许“发送通知”以防漏单。</div>
   
-  <button class="btn b1" id="btnScan">🔍 扫描 1H 趋势（今日）</button>
+  <button class="btn b1" id="btnScan">🔍 扫描 1H 趋势（>20万成交额）</button>
   <button class="btn b3" id="btnTimer">⏱️ 开启 5m 扣扳机巡航</button>
   <button class="btn b4" id="btnRescan" style="display:none">🔄 强制重扫</button>
   <div class="st"><span class="lbl">趋势扫描状态</span><span class="val" id="scanStatus">未扫描</span></div>
@@ -71,7 +71,7 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
   <div class="st"><span class="lbl">状态 / 警报</span><span class="val" id="progress">-</span></div>
 </div>
 
-<div id="ranking"><div class="empty">尚未扫描，点击上方按钮筛选 24h 成交额大于 500 万 USDT 的币种，并开始 1H 趋势扫描。</div></div>
+<div id="ranking"><div class="empty">尚未扫描，点击上方按钮筛选 24h 成交额 > 20 万 USDT 的币种，并开始 1H 趋势扫描。</div></div>
 
 <script>
 const BACKUP_COINS = [
@@ -122,7 +122,7 @@ function playAlert() {
 
   if ("Notification" in window && Notification.permission === "granted") {
     new Notification("🚨 5m扣扳机警报", {
-      body: "价格到达15m支撑/压力区，5m出现入场信号，请立即查看！",
+      body: "5m级别出现入场信号，请立即查看！",
       tag: "entry-alert",
       renotify: true
     });
@@ -182,7 +182,7 @@ function calcEMA(closes,period){
   for(let i=period;i<closes.length;i++) ema.push(closes[i]*k+ema[ema.length-1]*(1-k));
   return new Array(period-1).fill(NaN).concat(ema);
 }
-async function batchFetch(tasks, concurrency=8){
+async function batchFetch(tasks, concurrency=10){
   const results=new Array(tasks.length).fill(null);
   let idx=0;
   async function worker(){
@@ -204,6 +204,7 @@ async function loadInstrumentsInfo() {
     });
 }
 
+// ============ 获取 24h 成交额 > 20万 USDT 的币种 ============
 async function getActiveCoinsByVolume() {
     const res = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
     if (res.err || !res.data || res.data.length === 0) {
@@ -214,26 +215,25 @@ async function getActiveCoinsByVolume() {
         const volCcy24h = parseFloat(t.volCcy24h || 0);
         const lastPrice = parseFloat(t.last || 0);
         const turnoverUSDT = volCcy24h * lastPrice;
-        return turnoverUSDT >= 5000000;
+        return turnoverUSDT >= 200000; // 20万门槛
     });
     return activeList.map(t => t.instId);
 }
 
-// ============ 1H 定趋势（平稳排列，影线不破 EMA5） ============
+// ============ 1H 定趋势（阳线占多 + 影线不破EMA5） ============
 function analyzeTrend1h(kh, instId){
   const info = instrumentListMap[instId];
   if (info && info.listTime) {
       const daysOnline = (Date.now() - info.listTime) / (1000 * 3600 * 24);
-      if (daysOnline < 7) return null; // 过滤上线不足7天的新币
+      if (daysOnline < 7) return null; 
   }
 
   const {o,h,l,c}=kh;
   const n=c.length;
   if(n<25) return null;
   
-  // 过滤极端波动：最近10根1H振幅过大
   for (let i = Math.max(0, n - 10); i < n; i++) {
-      if (c[i] > 0 && (h[i] - l[i]) / c[i] > 0.10) return null;
+      if (c[i] > 0 && (h[i] - l[i]) / c[i] > 0.10) return null; // 过滤短期极端振幅
   }
 
   const ema5=calcEMA(c,5);
@@ -242,53 +242,59 @@ function analyzeTrend1h(kh, instId){
 
   const lastE5=ema5[n-1], lastE20=ema20[n-1], lastC=c[n-1];
   
-  // 必须是平稳排列
   let direction=null;
-  if(lastE5>lastE20 && lastC>lastE5 && (lastE5-lastE20)/lastE20 < 0.03) direction='LONG'; // 乖离率不超过3%
+  if(lastE5>lastE20 && lastC>lastE5 && (lastE5-lastE20)/lastE20 < 0.03) direction='LONG'; 
   else if(lastE5<lastE20 && lastC<lastE5 && (lastE20-lastE5)/lastE20 < 0.03) direction='SHORT';
   if(!direction) return null;
 
-  // 连续站稳根数 (1H) + 影线严格不破EMA5
+  // 连续站稳根数 + 影线严格不破EMA5
   let streak=0;
   for(let i=n-1;i>=0;i--){
     if(isNaN(ema5[i])||isNaN(ema20[i])) break;
     if(direction==='LONG'){
-      // 多头：最低价(影线)必须高于EMA5，且收盘价也在EMA5之上
       if(l[i] > ema5[i] && c[i] > ema5[i]) streak++;
       else break;
     } else {
-      // 空头：最高价(影线)必须低于EMA5，且收盘价也在EMA5之下
       if(h[i] < ema5[i] && c[i] < ema5[i]) streak++;
       else break;
     }
   }
   if(streak<3) return null;
 
-  // 影线质量：最近N根平均实体占比
-  const cnt=Math.min(streak,10);
+  // 核心：阴阳线比例检查
+  const cnt=Math.min(streak, 10);
   const st=n-cnt;
+  let upCount = 0, downCount = 0;
   let sumBodyRatio=0;
+  
   for(let i=st;i<n;i++){
+    if (c[i] > o[i]) upCount++;
+    else if (c[i] < o[i]) downCount++;
+    
     const range=h[i]-l[i];
     if(range<=0){ sumBodyRatio+=1; continue; }
     sumBodyRatio += Math.abs(c[i]-o[i])/range;
   }
-  const avgBodyRatio=sumBodyRatio/cnt;
+  
+  // 多头必须阳线占多，空头必须阴线占多
+  if (direction === 'LONG' && upCount <= downCount) return null;
+  if (direction === 'SHORT' && downCount <= upCount) return null;
 
-  // 评分
+  const avgBodyRatio=sumBodyRatio/cnt;
   const streakScore=Math.min(streak*6,60);
   const shadowScore=avgBodyRatio*40;
   const score = Math.round(streakScore + shadowScore);
 
   return {
     direction, streak, avgBodyRatio, score,
-    ema5:lastE5, ema20:lastE20, curClose:lastC
+    ema5:lastE5, ema20:lastE20, curClose:lastC,
+    upCount, downCount
   };
 }
 
-// ============ 15m 反向回调找支撑/压力区 ============
-function find15mPullbackZone(k15m, direction) {
-    const {h,l,c} = k15m;
+// ============ 5m 反向回调找支撑/压力区 ============
+function find5mPullbackZone(k5m, direction) {
+    const {h,l,c} = k5m;
     const n = h.length;
     if(n < 30) return {supports:[], resistances:[]};
     const curC = c[n-1];
@@ -331,36 +337,31 @@ function check5mTrigger(k5m, direction, zone){
     const curE5 = ema5[n-1], prevE5 = ema5[n-2];
 
     if(direction === 'LONG'){
-        // 判定是否到达15m支撑区 (上下 1% 误差)
         const nearS = zone.supports.find(s => curC >= s*0.99 && curC <= s*1.01);
-        
-        // 扣扳机条件：5m最新K线为阳线，且收盘高于前一根，收在EMA5之上，且EMA5拐头向上
         const isTrigger = curC > curO && curC > prevC && curC > curE5 && curE5 > prevE5;
 
         if (nearS && isTrigger) {
-            return {signal:'ENTRY', reason:`回踩15m支撑 ${px(nearS)} 附近，5m出现止跌阳线扣动扳机`, support:nearS};
+            return {signal:'ENTRY', reason:`回踩5m支撑 ${px(nearS)} 附近，5m出现止跌阳线扣动扳机`, support:nearS};
         }
         if (nearS) {
-            return {signal:'NEAR', reason:`已到达15m支撑 ${px(nearS)} 附近，等待5m收阳扣动扳机`, support:nearS};
+            return {signal:'NEAR', reason:`已到达5m支撑 ${px(nearS)} 附近，等待5m收阳扣动扳机`, support:nearS};
         }
-        return {signal:'WAIT', reason:'等待价格反向回调至15m支撑区'};
+        return {signal:'WAIT', reason:'等待价格反向回调至5m支撑区'};
     } else {
         const nearR = zone.resistances.find(r => curC <= r*1.01 && curC >= r*0.99);
-        
-        // 扣扳机条件：5m最新K线为阴线，且收盘低于前一根，收在EMA5之下，且EMA5拐头向下
         const isTrigger = curC < curO && curC < prevC && curC < curE5 && curE5 < prevE5;
 
         if (nearR && isTrigger) {
-            return {signal:'ENTRY', reason:`反弹至15m压力 ${px(nearR)} 附近，5m出现滞涨阴线扣动扳机`, resistance:nearR};
+            return {signal:'ENTRY', reason:`反弹至5m压力 ${px(nearR)} 附近，5m出现滞涨阴线扣动扳机`, resistance:nearR};
         }
         if (nearR) {
-            return {signal:'NEAR', reason:`已到达15m压力 ${px(nearR)} 附近，等待5m收阴扣动扳机`, resistance:nearR};
+            return {signal:'NEAR', reason:`已到达5m压力 ${px(nearR)} 附近，等待5m收阴扣动扳机`, resistance:nearR};
         }
-        return {signal:'WAIT', reason:'等待价格反向反弹至15m压力区'};
+        return {signal:'WAIT', reason:'等待价格反向反弹至5m压力区'};
     }
 }
 
-// ============ 1H 趋势扫描主流程 ============
+// ============ 主流程 ============
 async function scanTrend(force=false){
   if(isScanningTrend) return;
   isScanningTrend=true;
@@ -385,21 +386,20 @@ async function scanTrend(force=false){
     if(!a) return null;
     return {base:inst.split('-')[0], instId:inst, ...a};
   }));
-  const trendRaw=await batchFetch(tasks,8);
+  const trendRaw=await batchFetch(tasks,10);
   const trendPass=trendRaw.filter(Boolean).sort((a,b)=>b.score-a.score);
 
-  // 评分大于50的进入回调区分析
   const filtered=trendPass.filter(x=>x.score>=50);
-  $('progress').innerHTML=`<span class="sp"></span>15m 回调区分析 (${filtered.length}个)...`;
+  $('progress').innerHTML=`<span class="sp"></span>5m 回调区分析 (${filtered.length}个)...`;
 
   let done1=0;
   const tasks1=filtered.map(item=>(async()=>{
-    const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=15m&limit=100`);
+    const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=5m&limit=100`);
     done1++;
-    $('progress').innerText=`15m 分析 ${done1}/${filtered.length}`;
+    $('progress').innerText=`5m 分析 ${done1}/${filtered.length}`;
     if(res.err||!res.data||res.data.length<30) return {...item, zone:{supports:[],resistances:[]}};
-    const k15=parseK(res.data);
-    const zone=find15mPullbackZone(k15, item.direction);
+    const k5=parseK(res.data);
+    const zone=find5mPullbackZone(k5, item.direction);
     return {...item, zone};
   }));
   const withZone=await batchFetch(tasks1,8);
@@ -408,7 +408,7 @@ async function scanTrend(force=false){
   state.scanDate=todayStr();
   state.scanTime=Date.now();
   
-  localStorage.setItem('okx_trend_scan_v1',JSON.stringify({
+  localStorage.setItem('okx_trend_scan_v2',JSON.stringify({
     date:state.scanDate, time:state.scanTime, results:state.trendResults
   }));
 
@@ -486,7 +486,7 @@ function render(){
             <span class="score-badge">${r.score}分</span>
             ${eTag}
           </div>
-          <div class="rh-mid">站稳${r.streak}根 · 实体占比${(r.avgBodyRatio*100).toFixed(0)}%</div>
+          <div class="rh-mid">站稳${r.streak}根 · 阳/阴:${r.upCount}/${r.downCount} · 实体占比${(r.avgBodyRatio*100).toFixed(0)}%</div>
         </div>
         <span class="arrow" id="arrow-${r.base}">▼</span>
       </div>
@@ -494,20 +494,21 @@ function render(){
         <div class="sec">
           <div class="sec-title">📊 1H 定趋势</div>
           <div class="sec-body">
-            <div class="row"><span>方向</span><b class="${dirCls}">${r.direction==='LONG'?'多头平稳排列':'空头平稳排列'}</b></div>
+            <div class="row"><span>方向</span><b class="${dirCls}">${r.direction==='LONG'?'多头平稳排列（阳线占多）':'空头平稳排列（阴线占多）'}</b></div>
             <div class="row"><span>连续站稳</span><b>${r.streak} 根 (影线未刺穿EMA5)</b></div>
+            <div class="row"><span>最近10根阴阳比例</span><b class="${dirCls}">${r.upCount}阳 / ${r.downCount}阴</b></div>
             <div class="row"><span>影线质量</span><b>${(r.avgBodyRatio*100).toFixed(1)}% 实体占比</b></div>
             <div class="row"><span>最新收盘</span><b>${px(r.curClose)}</b></div>
           </div>
         </div>
         <div class="sec">
-          <div class="sec-title">📈 15m 反向回调寻找入场点</div>
+          <div class="sec-title">📈 5m 反向回调寻找入场点</div>
           <div class="sec-body">
             ${r.direction==='LONG' ? `
-              <div class="row"><span>15m 回调支撑区</span><b class="L">${r.zone.supports.length?r.zone.supports.map(px).join(' / '):'——'}</b></div>
+              <div class="row"><span>5m 回调支撑区</span><b class="L">${r.zone.supports.length?r.zone.supports.map(px).join(' / '):'——'}</b></div>
               <div class="row"><span>距最近支撑</span><b>${r.zone.supports.length?((r.curClose-r.zone.supports[0])/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
             ` : `
-              <div class="row"><span>15m 反弹压力区</span><b class="S">${r.zone.resistances.length?r.zone.resistances.map(px).join(' / '):'——'}</b></div>
+              <div class="row"><span>5m 反弹压力区</span><b class="S">${r.zone.resistances.length?r.zone.resistances.map(px).join(' / '):'——'}</b></div>
               <div class="row"><span>距最近压力</span><b>${r.zone.resistances.length?((r.zone.resistances[0]-r.curClose)/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
             `}
           </div>
@@ -534,14 +535,14 @@ function buildEntryPlan(r,entry){
     const s=entry.support||r.zone.supports[0]||cur*0.995;
     plan=`
       <div class="row"><span>建议入场</span><b class="L">${px(cur)} (市价/挂单)</b></div>
-      <div class="row"><span>防守止损</span><b class="Y">${px(s*0.99)} (跌破15m支撑)</b></div>
-      <div class="row"><span>短线止盈</span><b class="B">${px(cur*1.006)} ~ ${px(cur*1.01)}</b></div>`;
+      <div class="row"><span>防守止损</span><b class="Y">${px(s*0.99)} (跌破5m支撑)</b></div>
+      <div class="row"><span>短线止盈</span><b class="B">${px(cur*1.005)} ~ ${px(cur*1.008)}</b></div>`;
   } else {
     const resP=entry.resistance||r.zone.resistances[0]||cur*1.005;
     plan=`
       <div class="row"><span>建议入场</span><b class="S">${px(cur)} (市价/挂单)</b></div>
-      <div class="row"><span>防守止损</span><b class="Y">${px(resP*1.01)} (突破15m压力)</b></div>
-      <div class="row"><span>短线止盈</span><b class="B">${px(cur*0.994)} ~ ${px(cur*0.99)}</b></div>`;
+      <div class="row"><span>防守止损</span><b class="Y">${px(resP*1.01)} (突破5m压力)</b></div>
+      <div class="row"><span>短线止盈</span><b class="B">${px(cur*0.995)} ~ ${px(cur*0.992)}</b></div>`;
   }
   return plan;
 }
@@ -559,7 +560,7 @@ window.toggleCard=function(base){
 
 function restoreCache(){
   try{
-    const raw=localStorage.getItem('okx_trend_scan_v1');
+    const raw=localStorage.getItem('okx_trend_scan_v2');
     if(!raw) return false;
     const cached=JSON.parse(raw);
     if(cached.date!==todayStr()) return false;
