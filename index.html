@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 日线定趋势 · 1h支撑压力 · 15m入场（防妖币）</title>
+<title>欧易 日线定趋势 · 1h反向回调 · 15m扣扳机（200活跃币）</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:720px;margin:0 auto}
@@ -54,34 +54,29 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .tag.trend{background:#0d1f33;color:#58a6ff;border:1px solid #58a6ff}
 .tag.wait{background:#21262d;color:#8b949e;border:1px solid #484f58}
 .info-line{font-size:12px;color:#8b949e;margin-top:3px}
+.warn-bar{background:rgba(218,54,51,0.1);border:1px solid #da3633;color:#f85149;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;text-align:center;}
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 日线定趋势 · 1h支撑压力 · 15m入场</h2>
-  <button class="btn b1" id="btnScan">🔍 扫描日线趋势（今日）</button>
-  <button class="btn b3" id="btnTimer">⏱️ 开启 15m 定时入场扫描</button>
-  <button class="btn b4" id="btnRescan" style="display:none">🔄 强制重扫日线</button>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 日线定趋势 · 1h回调 · 15m扣扳机</h2>
+  <div class="warn-bar">📢 防锁屏漏单提示：请保持屏幕常亮，或在浏览器菜单选择“添加到主屏幕”运行。并在设置中允许本页面“发送通知”。</div>
+  
+  <button class="btn b1" id="btnScan">🔍 扫描前200活跃币（今日）</button>
+  <button class="btn b3" id="btnTimer">⏱️ 开启 15m 扣扳机巡航</button>
+  <button class="btn b4" id="btnRescan" style="display:none">🔄 强制重扫</button>
   <div class="st"><span class="lbl">今日扫描状态</span><span class="val" id="scanStatus">未扫描</span></div>
   <div class="st"><span class="lbl">下次 15m 扫描</span><span class="timer" id="countdown">--:--</span></div>
-  <div class="st"><span class="lbl">扫描进度</span><span class="val" id="progress">-</span></div>
+  <div class="st"><span class="lbl">状态 / 警报</span><span class="val" id="progress">-</span></div>
 </div>
 
-<div id="ranking"><div class="empty">尚未扫描，点击上方按钮开始日线趋势扫描（每日只需一次）。</div></div>
+<div id="ranking"><div class="empty">尚未扫描，点击上方按钮获取当前前200活跃币并开始日线趋势扫描。</div></div>
 
 <script>
-const FIXED_COINS = [
-  "BTCUSDT","ETHUSDT","SOXLUSDT","SNDKUSDT","ZECUSDT","SOLUSDT","NVDAUSDT","XAUUSDT","ANTUSDT","MMTUSDT",
-  "MUUSDT","XRPUSDT","SKHYNIXUSDT","SOXSUSDT","HYPEUSDT","PIEVERSEUSDT","BREVUSDT","XAGUSDT","KORUUSDT","DOGEUSDT",
-  "PEPEUSDT","SPCXUSDT","NEARUSDT","PIPPINUSDT","SNXXUSDT","CLUSDT","PUMPUSDT","SKHYUSDT","MSTRUSDT","UNIUSDT",
-  "QQQUSDT","LITUSDT","AKEUSDT","WLDUSDT","AMDUSDT","AAOIUSDT","ENAUSDT","FILUSDT","SUIUSDT","INTCUSDT",
-  "ZHONGJIUSDT","NBISUSDT","BNBUSDT","CRCLUSDT","TRUMPUSDT","PENGUUSDT","ADAUSDT","AAVEUSDT","TQQQUSDT","LINKUSDT",
-  "GOOGLUSDT","UNITREEUSDT","MRVLUSDT","BZUSDT","LTCUSDT","HUMAUSDT","INJUSDT","STRKUSDT","LITEUSDT","BCHUSDT",
-  "AVAXUSDT","ASTERUSDT","TSLAUSDT","IRYSUSDT","CRWVUSDT","DRAMUSDT","TAOUSDT","ZROUSDT","ARBUSDT","SAMSUNGUSDT",
-  "ZILUSDT","UPUSDT","ZHIPUUSDT","VVVUSDT","BTWUSDT","AAPLUSDT","XPLUSDT","ONDOUSDT","TRXUSDT","OKBUSDT",
-  "TSMUSDT","NESUSDT","AXTIUSDT","NIGHTUSDT","SPYUSDT","UVXYUSDT","MUUUSDT","DGAIUSDT","GRAMUSDT","XLMUSDT",
-  "ICPUSDT","SQQQUSDT","CXMTUSDT","BEUSDT","SOPHUSDT","PROSUSDT","EWYUSDT","USELESSUSDT","ZKPUSDT","OPUSDT"
+const BACKUP_COINS = [
+  "BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","DOTUSDT","SUIUSDT",
+  "NEARUSDT","APTUSDT","OPUSDT","ARBUSDT","FILUSDT","LTCUSDT","BCHUSDT","UNIUSDT","INJUSDT","TIAUSDT"
 ];
 
 const $=i=>document.getElementById(i);
@@ -90,8 +85,8 @@ let audioCtx=null;
 let timerOn=false;
 let timerHandle=null, countdownHandle=null;
 let isScanningDaily=false, isScanningEntry=false;
+let originalTitle = document.title;
 
-// 新增：交易对基础信息（用于过滤新币）
 let instrumentListMap = {}; 
 
 const state = {
@@ -105,16 +100,68 @@ function todayStr(){
   const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function playAlert(){
-  if(!audioCtx) return;
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-  o.connect(g); g.connect(audioCtx.destination);
-  o.type='sine'; o.frequency.setValueAtTime(880,audioCtx.currentTime);
-  g.gain.setValueAtTime(1,audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.5);
-  o.start(); o.stop(audioCtx.currentTime+0.5);
+
+// ============ 5秒长响警报 + 系统通知 + 标题闪烁 ============
+function playAlert() {
+  // 1. 合成 5秒 警报音
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    // 使用方波更刺耳，频率高频交替（救护车警报感）
+    osc.type = 'square'; 
+    
+    const t = audioCtx.currentTime;
+    for (let i = 0; i < 10; i++) {
+        // 每0.5秒切换一次频率，共5秒
+        osc.frequency.setValueAtTime(i % 2 === 0 ? 1000 : 800, t + i * 0.5);
+    }
+    
+    // 音量设为最大，5秒后淡出
+    gain.gain.setValueAtTime(1, t);
+    gain.gain.setValueAtTime(1, t + 4.5);
+    gain.gain.exponentialRampToValueAtTime(0.01, t + 5.0);
+    
+    osc.start(t);
+    osc.stop(t + 5.0);
+  }
+
+  // 2. 发送系统通知（锁屏或切后台时系统栏弹出）
+  if ("Notification" in window) {
+    if (Notification.permission === "granted") {
+      new Notification("🚨 扣扳机警报", {
+        body: "15分钟级别出现入场信号，请立即查看！",
+        tag: "entry-alert",
+        renotify: true
+      });
+    }
+  }
+
+  // 3. 标签页标题疯狂闪烁
+  let isOriginal = true;
+  let flashCount = 0;
+  const flashInterval = setInterval(() => {
+    document.title = isOriginal ? "🚨 扣扳机警报！" : originalTitle;
+    isOriginal = !isOriginal;
+    flashCount++;
+    if (flashCount > 20) {
+      clearInterval(flashInterval);
+      document.title = originalTitle;
+    }
+  }, 500);
 }
+
+async function requestNotificationPermission() {
+    if ("Notification" in window) {
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+            try { await Notification.requestPermission(); } catch(e) {}
+        }
+    }
+}
+
 async function fetchOKX(path){
   const ctrl=new AbortController();
   const t=setTimeout(()=>ctrl.abort(),7000);
@@ -161,32 +208,40 @@ async function batchFetch(tasks, concurrency=8){
   return results;
 }
 
-// ============ 获取全平台交易对信息（判断上市时间，防新币） ============
 async function loadInstrumentsInfo() {
     if (Object.keys(instrumentListMap).length > 0) return;
     const res = await fetchOKX('/api/v5/public/instruments?instType=SWAP');
     if (res.err || !res.data) return;
     res.data.forEach(item => {
-        instrumentListMap[item.instId] = {
-            listTime: parseInt(item.listTime) || 0
-        };
+        instrumentListMap[item.instId] = { listTime: parseInt(item.listTime) || 0 };
     });
 }
 
-// ============ 日线分析 ============
+async function getTop200ActiveCoins() {
+    const res = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
+    if (res.err || !res.data || res.data.length === 0) {
+        return BACKUP_COINS.map(c=>c.replace('USDT','-USDT-SWAP'));
+    }
+    const usdtList = res.data.filter(t => t.instId.endsWith('USDT-SWAP'));
+    usdtList.sort((a,b) => {
+        const volA = parseFloat(a.volCcy24h || 0);
+        const volB = parseFloat(b.volCcy24h || 0);
+        return volB - volA;
+    });
+    return usdtList.slice(0, 200).map(t => t.instId);
+}
+
 function analyzeDaily(kd, instId){
-  // 过滤1：上市不足45天的新币（PIPPIN这类往往是新币）
   const info = instrumentListMap[instId];
   if (info && info.listTime) {
       const daysOnline = (Date.now() - info.listTime) / (1000 * 3600 * 24);
-      if (daysOnline < 45) return null;
+      if (daysOnline < 45) return null; 
   }
 
   const {o,h,l,c}=kd;
   const n=c.length;
   if(n<25) return null;
   
-  // 过滤2：过滤单日剧烈波动的“妖币”（最近5天如果有单日振幅超过25%，直接剔除）
   for (let i = Math.max(0, n - 5); i < n; i++) {
       if (c[i] > 0 && (h[i] - l[i]) / c[i] > 0.25) return null;
   }
@@ -204,9 +259,13 @@ function analyzeDaily(kd, instId){
   let streak=0;
   for(let i=n-1;i>=0;i--){
     if(isNaN(ema5[i])||isNaN(ema20[i])) break;
-    if(direction==='LONG' && c[i]>ema5[i] && c[i]>ema20[i]) streak++;
-    else if(direction==='SHORT' && c[i]<ema5[i] && c[i]<ema20[i]) streak++;
-    else break;
+    if(direction==='LONG'){
+      if(l[i] > ema20[i] && c[i] > ema5[i]) streak++;
+      else break;
+    } else {
+      if(h[i] < ema20[i] && c[i] < ema5[i]) streak++;
+      else break;
+    }
   }
   if(streak<3) return null;
 
@@ -225,6 +284,16 @@ function analyzeDaily(kd, instId){
   let sumAmp=0;
   for(let i=ast;i<n;i++) sumAmp += (h[i]-l[i])/c[i]*100;
   const avgAmp=sumAmp/actCnt;
+  if (avgAmp > 12) return null;
+
+  const curRange = h[n-1] - l[n-1];
+  let shadowPenalty = 0;
+  if(curRange > 0) {
+      const upperShadowRatio = (h[n-1] - Math.max(o[n-1], c[n-1])) / curRange;
+      const lowerShadowRatio = (Math.min(o[n-1], c[n-1]) - l[n-1]) / curRange;
+      if(direction === 'LONG' && upperShadowRatio > 0.3) shadowPenalty = (upperShadowRatio - 0.3) * 20; 
+      if(direction === 'SHORT' && lowerShadowRatio > 0.3) shadowPenalty = (lowerShadowRatio - 0.3) * 20;
+  }
 
   const streakScore=Math.min(streak*5,50);
   const shadowScore=avgBodyRatio*25;
@@ -234,11 +303,8 @@ function analyzeDaily(kd, instId){
   else if(avgAmp<=6) actScore=15+(avgAmp-2)/4*10;
   else if(avgAmp<=10) actScore=25-(avgAmp-6)/4*10;
   else actScore=Math.max(0,15-(avgAmp-10)*2);
-  
-  // 过滤3：振幅过低或过高直接降级或剔除
-  if (avgAmp > 12) return null;
 
-  const score=Math.round(streakScore+shadowScore+actScore);
+  const score = Math.max(0, Math.round(streakScore + shadowScore + actScore - shadowPenalty));
 
   return {
     direction, streak, avgBodyRatio, avgAmp, score,
@@ -246,104 +312,90 @@ function analyzeDaily(kd, instId){
   };
 }
 
-// ============ 1h 支撑压力 ============
-function findSR(k1h){
-  const {h,l,c}=k1h;
-  const n=h.length;
-  if(n<20) return {supports:[],resistances:[]};
-  const curC=c[n-1];
-  const swingHighs=[], swingLows=[];
-  const w=3;
-  for(let i=w;i<n-w;i++){
-    let isH=true,isL=true;
-    for(let j=1;j<=w;j++){
-      if(h[i]<=h[i-j]||h[i]<=h[i+j]) isH=false;
-      if(l[i]>=l[i-j]||l[i]>=l[i+j]) isL=false;
+function find1hPullbackZone(k1h, direction) {
+    const {h,l,c} = k1h;
+    const n = h.length;
+    if(n < 30) return {supports:[], resistances:[]};
+    const curC = c[n-1];
+    const ema20 = calcEMA(c, 20)[n-1];
+
+    const swingHighs = [], swingLows = [];
+    const w = 3;
+    for(let i=w; i<n-w; i++){
+        let isH=true, isL=true;
+        for(let j=1; j<=w; j++){
+            if(h[i]<=h[i-j] || h[i]<=h[i+j]) isH=false;
+            if(l[i]>=l[i-j] || l[i]>=l[i+j]) isL=false;
+        }
+        if(isH) swingHighs.push(h[i]);
+        if(isL) swingLows.push(l[i]);
     }
-    if(isH) swingHighs.push(h[i]);
-    if(isL) swingLows.push(l[i]);
-  }
-  const supports=swingLows.filter(x=>x<curC).sort((a,b)=>b-a).slice(0,3);
-  const resistances=swingHighs.filter(x=>x>curC).sort((a,b)=>a-b).slice(0,3);
-  if(supports.length===0){
-    const rl=Math.min(...l.slice(-24));
-    if(rl<curC) supports.push(rl);
-  }
-  if(resistances.length===0){
-    const rh=Math.max(...h.slice(-24));
-    if(rh>curC) resistances.push(rh);
-  }
-  return {supports,resistances,curClose:curC};
+
+    if (direction === 'LONG') {
+        let supports = swingLows.filter(x => x < curC).sort((a,b)=>b-a).slice(0, 2);
+        if (ema20 < curC) supports.push(ema20);
+        supports.sort((a,b)=>b-a); 
+        return { supports, resistances: [] };
+    } else {
+        let resistances = swingHighs.filter(x => x > curC).sort((a,b)=>a-b).slice(0, 2);
+        if (ema20 > curC) resistances.push(ema20);
+        resistances.sort((a,b)=>a-b);
+        return { supports: [], resistances };
+    }
 }
 
-// ============ 15m 入场判定 ============
-function checkEntry(k15m, direction, sr){
-  const {c}=k15m;
-  const n=c.length;
-  if(n<10) return {signal:'WAIT',reason:'数据不足'};
-  const ema5=calcEMA(c,5);
-  const ema9=calcEMA(c,9);
-  const curC=c[n-1];
-  const curE5=ema5[n-1], curE9=ema9[n-1];
+function check15mTrigger(k15m, direction, zone){
+    const {o,h,l,c}=k15m;
+    const n=c.length;
+    if(n<10) return {signal:'WAIT',reason:'数据不足'};
+    
+    const ema5 = calcEMA(c, 5);
+    const curC = c[n-1], prevC = c[n-2];
+    const curO = o[n-1];
+    const curE5 = ema5[n-1], prevE5 = ema5[n-2];
 
-  let crossFresh=false;
-  for(let i=Math.max(1,n-3);i<n;i++){
-    const prevUp=ema5[i-1]>ema9[i-1];
-    const curUp=ema5[i]>ema9[i];
-    if(direction==='LONG' && !prevUp && curUp){ crossFresh=true; break; }
-    if(direction==='SHORT' && prevUp && !curUp){ crossFresh=true; break; }
-  }
+    if(direction === 'LONG'){
+        const nearS = zone.supports.find(s => curC >= s*0.99 && curC <= s*1.01);
+        const isTrigger = curC > curO && curC > prevC && curC > curE5 && curE5 > prevE5;
 
-  if(direction==='LONG'){
-    const nearS=sr.supports.find(s=>curC>=s*0.992 && curC<=s*1.01);
-    const bull=curE5>curE9;
-    const aboveE5=curC>curE5;
-    if(nearS && bull && aboveE5){
-      return {signal:'ENTRY',reason:`价格回踩支撑 ${px(nearS)} 附近，15m EMA5>EMA9，收盘站稳EMA5${crossFresh?'（刚金叉）':''}`,support:nearS};
+        if (nearS && isTrigger) {
+            return {signal:'ENTRY', reason:`回踩1h支撑 ${px(nearS)} 附近，15m出现止跌阳线扣动扳机`, support:nearS};
+        }
+        if (nearS) {
+            return {signal:'NEAR', reason:`已到达1h支撑 ${px(nearS)} 附近，等待15m收阳扣动扳机`, support:nearS};
+        }
+        return {signal:'WAIT', reason:'等待价格反向回调至1h支撑区'};
+    } else {
+        const nearR = zone.resistances.find(r => curC <= r*1.01 && curC >= r*0.99);
+        const isTrigger = curC < curO && curC < prevC && curC < curE5 && curE5 < prevE5;
+
+        if (nearR && isTrigger) {
+            return {signal:'ENTRY', reason:`反弹至1h压力 ${px(nearR)} 附近，15m出现滞涨阴线扣动扳机`, resistance:nearR};
+        }
+        if (nearR) {
+            return {signal:'NEAR', reason:`已到达1h压力 ${px(nearR)} 附近，等待15m收阴扣动扳机`, resistance:nearR};
+        }
+        return {signal:'WAIT', reason:'等待价格反向反弹至1h压力区'};
     }
-    if(nearS){
-      return {signal:'NEAR',reason:`价格已到支撑 ${px(nearS)} 附近，等待15m EMA5/EMA9金叉并站稳`,support:nearS};
-    }
-    if(bull && aboveE5){
-      return {signal:'TREND',reason:'15m趋势向上，但价格尚未回踩支撑，等待回调'};
-    }
-    return {signal:'WAIT',reason:'等待价格回踩支撑 + 15m金叉'};
-  } else {
-    const nearR=sr.resistances.find(r=>curC<=r*1.008 && curC>=r*0.99);
-    const bear=curE5<curE9;
-    const belowE5=curC<curE5;
-    if(nearR && bear && belowE5){
-      return {signal:'ENTRY',reason:`价格反弹至压力 ${px(nearR)} 附近，15m EMA5<EMA9，收盘跌破EMA5${crossFresh?'（刚死叉）':''}`,resistance:nearR};
-    }
-    if(nearR){
-      return {signal:'NEAR',reason:`价格已到压力 ${px(nearR)} 附近，等待15m EMA5/EMA9死叉并跌破`,resistance:nearR};
-    }
-    if(bear && belowE5){
-      return {signal:'TREND',reason:'15m趋势向下，但价格尚未反弹到压力，等待反弹'};
-    }
-    return {signal:'WAIT',reason:'等待价格反弹至压力 + 15m死叉'};
-  }
 }
 
-// ============ 日线扫描主流程 ============
 async function scanDaily(force=false){
   if(isScanningDaily) return;
   isScanningDaily=true;
   $('btnScan').disabled=true;
   $('btnRescan').disabled=true;
-  $('progress').innerHTML='<span class="sp"></span>加载基础信息过滤妖币...';
+  $('progress').innerHTML='<span class="sp"></span>获取活跃币与基础信息...';
   $('scanStatus').innerText='扫描中';
 
-  // 先获取基础信息（用于过滤新币）
   await loadInstrumentsInfo();
+  const top200 = await getTop200ActiveCoins();
 
   $('progress').innerHTML='<span class="sp"></span>日线扫描中...';
-  const targets=FIXED_COINS.map(c=>c.replace('USDT','-USDT-SWAP'));
   let done=0;
-  const tasks=targets.map(inst=>(async()=>{
+  const tasks=top200.map(inst=>(async()=>{
     const res=await fetchOKX(`/api/v5/market/candles?instId=${inst}&bar=1D&limit=60`);
     done++;
-    $('progress').innerText=`日线 ${done}/${targets.length} (${Math.round(done/targets.length*100)}%)`;
+    $('progress').innerText=`日线 ${done}/${top200.length} (${Math.round(done/top200.length*100)}%)`;
     if(res.err||!res.data||res.data.length<25) return null;
     
     const kd=parseK(res.data);
@@ -355,24 +407,25 @@ async function scanDaily(force=false){
   const dailyPass=dailyRaw.filter(Boolean).sort((a,b)=>b.score-a.score);
 
   const filtered=dailyPass.filter(x=>x.score>=40);
-  $('progress').innerHTML=`<span class="sp"></span>1h支撑压力分析 (${filtered.length}个)...`;
+  $('progress').innerHTML=`<span class="sp"></span>1h反向回调分析 (${filtered.length}个)...`;
 
   let done1=0;
   const tasks1=filtered.map(item=>(async()=>{
     const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=1H&limit=100`);
     done1++;
     $('progress').innerText=`1h分析 ${done1}/${filtered.length}`;
-    if(res.err||!res.data||res.data.length<20) return {...item, sr:{supports:[],resistances:[]}};
+    if(res.err||!res.data||res.data.length<30) return {...item, zone:{supports:[],resistances:[]}};
     const k1h=parseK(res.data);
-    const sr=findSR(k1h);
-    return {...item, sr};
+    const zone=find1hPullbackZone(k1h, item.direction);
+    return {...item, zone};
   }));
-  const withSR=await batchFetch(tasks1,6);
+  const withZone=await batchFetch(tasks1,6);
 
-  state.dailyResults=withSR;
+  state.dailyResults=withZone;
   state.scanDate=todayStr();
   state.scanTime=Date.now();
-  localStorage.setItem('okx_daily_scan_v4',JSON.stringify({
+  
+  localStorage.setItem('okx_daily_scan_v8',JSON.stringify({
     date:state.scanDate, time:state.scanTime, results:state.dailyResults
   }));
 
@@ -385,11 +438,8 @@ async function scanDaily(force=false){
   $('btnRescan').disabled=false;
   $('btnScan').disabled=false;
   isScanningDaily=false;
-  render();
-  if(state.dailyResults.some(r=>state.entryMap[r.base]?.signal==='ENTRY')) playAlert();
 }
 
-// ============ 15m 入场扫描 ============
 async function scanEntry(){
   if(isScanningEntry||state.dailyResults.length===0) return;
   isScanningEntry=true;
@@ -398,21 +448,35 @@ async function scanEntry(){
   const tasks=list.map(item=>(async()=>{
     const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=15m&limit=50`);
     done++;
-    $('progress').innerText=`15m入场 ${done}/${list.length}`;
+    $('progress').innerText=`15m监控 ${done}/${list.length}`;
     if(res.err||!res.data||res.data.length<10) return;
     const k15=parseK(res.data);
-    const entry=checkEntry(k15, item.direction, item.sr||{supports:[],resistances:[]});
+    const entry=check15mTrigger(k15, item.direction, item.zone||{supports:[],resistances:[]});
     state.entryMap[item.base]=entry;
   }));
   await batchFetch(tasks,6);
   isScanningEntry=false;
   render();
+  
+  let hasTrigger = false;
+  let triggeredCoins = [];
+  for (const base in state.entryMap) {
+      if (state.entryMap[base].signal === 'ENTRY') {
+          hasTrigger = true;
+          triggeredCoins.push(base);
+      }
+  }
+  if (hasTrigger) {
+      playAlert(); // 触发5秒长响 + 通知 + 闪烁
+      $('progress').innerHTML = `<span style="color:#3fb950;font-weight:bold;">🚨 扳机触发: ${triggeredCoins.join(', ')}</span>`;
+  } else {
+      $('progress').innerText = '监控完成，暂无入场';
+  }
 }
 
-// ============ 渲染 ============
 function render(){
   if(state.dailyResults.length===0){
-    $('ranking').innerHTML='<div class="empty">暂无符合条件的安全币种（已过滤上市不足45天及极端波动妖币）。</div>';
+    $('ranking').innerHTML='<div class="empty">暂无符合条件的活跃币种。</div>';
     return;
   }
   let html='';
@@ -422,8 +486,8 @@ function render(){
     const rankCls=idx===0?'top1':idx===1?'top2':idx===2?'top3':'';
     const rkCls=idx===0?'gold':idx===1?'silver':idx===2?'bronze':'';
     const entry=state.entryMap[r.base]||{signal:'WAIT',reason:'分析中...'};
-    const eTag = {ENTRY:'<span class="tag entry">🎯 入场触发</span>',
-                  NEAR:'<span class="tag near">⏳ 接近关键位</span>',
+    const eTag = {ENTRY:'<span class="tag entry">🎯 扣动扳机</span>',
+                  NEAR:'<span class="tag near">⏳ 到达回调区</span>',
                   TREND:'<span class="tag trend">📈 趋势中·待回调</span>',
                   WAIT:'<span class="tag wait">⏸ 等待</span>'}[entry.signal]||'';
     const openCls = entry.signal==='ENTRY'?'open':'';
@@ -438,37 +502,38 @@ function render(){
             <span class="score-badge">${r.score}分</span>
             ${eTag}
           </div>
-          <div class="rh-mid">站稳${r.streak}根 · 活跃${r.avgAmp.toFixed(2)}% · 影线质量${(r.avgBodyRatio*100).toFixed(0)}%</div>
+          <div class="rh-mid">站稳${r.streak}根 · 活跃${r.avgAmp.toFixed(2)}% · 实体占比${(r.avgBodyRatio*100).toFixed(0)}%</div>
         </div>
         <span class="arrow" id="arrow-${r.base}">▼</span>
       </div>
       <div class="rank-body ${openCls}" id="body-${r.base}">
         <div class="sec">
-          <div class="sec-title">📊 日线趋势分析</div>
+          <div class="sec-title">📊 日线定趋势</div>
           <div class="sec-body">
             <div class="row"><span>方向</span><b class="${dirCls}">${r.direction==='LONG'?'多头排列（EMA5>EMA20）':'空头排列（EMA5<EMA20）'}</b></div>
-            <div class="row"><span>连续站稳</span><b>${r.streak} 根日线</b></div>
-            <div class="row"><span>影线质量（实体占比）</span><b>${(r.avgBodyRatio*100).toFixed(1)}%（越高影线越短）</b></div>
+            <div class="row"><span>连续站稳</span><b>${r.streak} 根 (影线未刺穿)</b></div>
+            <div class="row"><span>影线质量</span><b>${(r.avgBodyRatio*100).toFixed(1)}% 实体占比</b></div>
             <div class="row"><span>10日平均振幅</span><b>${r.avgAmp.toFixed(2)}%</b></div>
-            <div class="row"><span>EMA5 / EMA20</span><b>${px(r.ema5)} / ${px(r.ema20)}</b></div>
             <div class="row"><span>最新收盘</span><b>${px(r.curClose)}</b></div>
-            <div class="info-line">${buildDailyComment(r)}</div>
           </div>
         </div>
         <div class="sec">
-          <div class="sec-title">📈 1小时支撑压力</div>
+          <div class="sec-title">📈 1h 反向回调寻找入场点</div>
           <div class="sec-body">
-            <div class="row"><span>支撑位</span><b class="L">${r.sr.supports.length?r.sr.supports.map(px).join(' / '):'——'}</b></div>
-            <div class="row"><span>压力位</span><b class="S">${r.sr.resistances.length?r.sr.resistances.map(px).join(' / '):'——'}</b></div>
-            <div class="row"><span>距最近支撑</span><b>${r.sr.supports.length?((r.curClose-r.sr.supports[0])/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
-            <div class="row"><span>距最近压力</span><b>${r.sr.resistances.length?((r.sr.resistances[0]-r.curClose)/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
+            ${r.direction==='LONG' ? `
+              <div class="row"><span>1h回调支撑区</span><b class="L">${r.zone.supports.length?r.zone.supports.map(px).join(' / '):'——'}</b></div>
+              <div class="row"><span>距最近支撑</span><b>${r.zone.supports.length?((r.curClose-r.zone.supports[0])/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
+            ` : `
+              <div class="row"><span>1h反弹压力区</span><b class="S">${r.zone.resistances.length?r.zone.resistances.map(px).join(' / '):'——'}</b></div>
+              <div class="row"><span>距最近压力</span><b>${r.zone.resistances.length?((r.zone.resistances[0]-r.curClose)/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
+            `}
           </div>
         </div>
         <div class="sec">
-          <div class="sec-title">⏱️ 15分钟入场信号</div>
+          <div class="sec-title">⏱️ 15m 回调扣扳机</div>
           <div class="sec-body">
             <div class="row"><span>状态</span><b>${eTag}</b></div>
-            <div class="row"><span>理由</span><b style="text-align:right;max-width:65%">${entry.reason||'——'}</b></div>
+            <div class="row"><span>信号</span><b style="text-align:right;max-width:65%">${entry.reason||'——'}</b></div>
             ${buildEntryPlan(r,entry)}
           </div>
         </div>
@@ -478,35 +543,22 @@ function render(){
   $('ranking').innerHTML=html;
 }
 
-function buildDailyComment(r){
-  let s='';
-  if(r.streak>=8) s+='日线连续站稳超8根，趋势非常稳健；';
-  else if(r.streak>=5) s+='日线站稳5根以上，趋势明确；';
-  else s+='日线站稳根数偏少，需持续观察；';
-  if(r.avgBodyRatio>=0.75) s+='影线极短，K线实体饱满，多头/空头控盘强；';
-  else if(r.avgBodyRatio>=0.55) s+='影线适中，趋势尚可；';
-  else s+='影线偏长，波动较大，注意假突破；';
-  if(r.avgAmp>=2&&r.avgAmp<=6) s+='活跃度适中，适合短线波段。';
-  else if(r.avgAmp<2) s+='波动偏低，机会较少。';
-  else s+='波动偏高，注意风险。';
-  return s;
-}
 function buildEntryPlan(r,entry){
   if(entry.signal!=='ENTRY'&&entry.signal!=='NEAR') return '';
   let plan='';
   const cur=r.curClose;
   if(r.direction==='LONG'){
-    const s=entry.support||r.sr.supports[0]||cur*0.995;
+    const s=entry.support||r.zone.supports[0]||cur*0.995;
     plan=`
-      <div class="row"><span>入场区间</span><b class="L">${px(s*0.998)} ~ ${px(s*1.006)}</b></div>
-      <div class="row"><span>止损</span><b class="Y">${px(s*0.99)}</b></div>
-      <div class="row"><span>止盈</span><b class="B">${px(s*1.008)}（窄止盈+0.8%）</b></div>`;
+      <div class="row"><span>建议入场</span><b class="L">${px(cur)} (市价/挂单)</b></div>
+      <div class="row"><span>防守止损</span><b class="Y">${px(s*0.99)} (跌破1h支撑)</b></div>
+      <div class="row"><span>短线止盈</span><b class="B">${px(cur*1.008)} ~ ${px(cur*1.012)}</b></div>`;
   } else {
-    const resP=entry.resistance||r.sr.resistances[0]||cur*1.005;
+    const resP=entry.resistance||r.zone.resistances[0]||cur*1.005;
     plan=`
-      <div class="row"><span>入场区间</span><b class="S">${px(resP*0.994)} ~ ${px(resP*1.002)}</b></div>
-      <div class="row"><span>止损</span><b class="Y">${px(resP*1.01)}</b></div>
-      <div class="row"><span>止盈</span><b class="B">${px(resP*0.992)}（窄止盈-0.8%）</b></div>`;
+      <div class="row"><span>建议入场</span><b class="S">${px(cur)} (市价/挂单)</b></div>
+      <div class="row"><span>防守止损</span><b class="Y">${px(resP*1.01)} (突破1h压力)</b></div>
+      <div class="row"><span>短线止盈</span><b class="B">${px(cur*0.992)} ~ ${px(cur*0.988)}</b></div>`;
   }
   return plan;
 }
@@ -522,10 +574,9 @@ window.toggleCard=function(base){
   }
 };
 
-// ============ 缓存恢复 ============
 function restoreCache(){
   try{
-    const raw=localStorage.getItem('okx_daily_scan_v4');
+    const raw=localStorage.getItem('okx_daily_scan_v8');
     if(!raw) return false;
     const cached=JSON.parse(raw);
     if(cached.date!==todayStr()) return false;
@@ -536,15 +587,15 @@ function restoreCache(){
   }catch(e){return false;}
 }
 
-// ============ 15m 定时器 ============
 function startTimer(){
   if(timerOn) return;
   if(state.dailyResults.length===0){
     alert('请先扫描日线趋势。');
     return;
   }
+  requestNotificationPermission(); // 开启时请求系统通知权限
   timerOn=true;
-  $('btnTimer').innerText='🛑 停止 15m 定时扫描';
+  $('btnTimer').innerText='🛑 停止 15m 巡航';
   $('btnTimer').classList.replace('b3','b2');
   scheduleNext();
   scanEntry();
@@ -554,7 +605,7 @@ function stopTimer(){
   if(timerHandle) clearTimeout(timerHandle);
   if(countdownHandle) clearInterval(countdownHandle);
   timerHandle=null; countdownHandle=null;
-  $('btnTimer').innerText='⏱️ 开启 15m 定时入场扫描';
+  $('btnTimer').innerText='⏱️ 开启 15m 扣扳机巡航';
   $('btnTimer').classList.replace('b2','b3');
   $('countdown').innerText='--:--';
 }
@@ -576,10 +627,10 @@ function scheduleNext(){
   },1000);
 }
 
-// ============ 按钮绑定 ============
 $('btnScan').onclick=()=>{
   if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   if(audioCtx.state==='suspended') audioCtx.resume();
+  requestNotificationPermission();
   scanDaily();
 };
 $('btnRescan').onclick=()=>{
@@ -594,7 +645,6 @@ $('btnTimer').onclick=()=>{
   if(timerOn) stopTimer(); else startTimer();
 };
 
-// ============ 初始化 ============
 (function init(){
   if(restoreCache()){
     $('scanStatus').innerText=`今日已扫描 (${state.dailyResults.length}个通过)`;
