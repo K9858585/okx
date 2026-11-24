@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 5m趋势评分 · BTC定向 · 推荐最高分</title>
+<title>欧易 5m趋势评分 · 推荐最高分（无BTC定向）</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:680px;margin:0 auto}
@@ -28,17 +28,12 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .badge{font-size:14px; padding:4px 10px; border-radius:12px; background:#21262d; border:1px solid #30363d;}
 .timer{color:#79c0ff; font-weight:bold; font-family:monospace;}
 .crown-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #ff9f0a, #ffb347); color: #000; font-weight: bold; font-size: 14px; padding: 4px 16px; border-radius: 12px; box-shadow: 0 4px 10px rgba(255,159,10,0.4); white-space: nowrap;}
-.btc-banner{display:flex;justify-content:center;gap:14px;font-size:13px;margin-top:8px;padding:8px;background:#161b22;border-radius:8px;border:1px solid #30363d}
-.btc-banner .up{color:#3fb950;font-weight:700}
-.btc-banner .down{color:#f85149;font-weight:700}
-.btc-banner .flat{color:#8b949e;font-weight:700}
-.streak-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;font-weight:700;background:#1f2d3a;color:#58a6ff;border:1px solid #58a6ff}
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m趋势评分 · BTC定向 · 推荐最高分</h2>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 5m趋势评分 · 推荐最高分</h2>
   <button class="btn b1" id="f1">🔍 扫描5m趋势评分</button>
   <button class="btn b3" id="f_auto">⏱️ 开启 5m 自动巡航</button>
   <div class="st">
@@ -47,10 +42,6 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
   </div>
   <div class="st" style="margin-top:5px; background:transparent; border:1px solid #2d3748; justify-content:center;">
     下次扫描倒计时: <span class="timer" id="countdown">--:--</span>
-  </div>
-  <div class="btc-banner" id="btcBanner">
-    <span>BTC 30m 定向:</span>
-    <span id="btcDir" class="flat">等待扫描...</span>
   </div>
 </div>
 
@@ -93,7 +84,7 @@ function isCooldown(coinName) {
     const cache = getCache();
     const lastTime = cache[coinName];
     if (!lastTime) return false;
-    return (Date.now() - lastTime) < 1800000; // 30分钟冷却，比之前短，方便连续捕捉
+    return (Date.now() - lastTime) < 1800000;
 }
 
 function playAlert(){
@@ -148,35 +139,9 @@ function calcEMA(closes, period) {
     return new Array(period - 1).fill(NaN).concat(ema);
 }
 
-// ===== 获取 BTC 前30分钟方向 =====
-async function getBtcDirection() {
-    const res = await fetchOKXDirect(`/api/v5/market/candles?instId=BTC-USDT-SWAP&bar=15m&limit=5`);
-    if (res.err || !res.data || res.data.length < 3) return { dir: 'FLAT', detail: '数据不足' };
-
-    const k = parseK(res.data);
-    if (k.c.length < 3) return { dir: 'FLAT', detail: '数据不足' };
-
-    const last = k.c.length - 1;
-    const open30 = k.o[last - 1];
-    const closeNow = k.c[last];
-    const change = (closeNow - open30) / open30 * 100;
-
-    let dir = 'FLAT';
-    if (change > 0.15) dir = 'UP';
-    else if (change < -0.15) dir = 'DOWN';
-
-    return { dir, change, detail: `前30分钟涨跌 ${change.toFixed(2)}%` };
-}
-
-// ===== 核心：5m趋势评分 =====
-// 只看5分钟K线趋势，根据以下维度打分：
-// 1. 连续站稳EMA5的根数（越多越好）
-// 2. EMA5与EMA9的排列关系（多头排列：EMA5>EMA9且差距大）
-// 3. 价格相对EMA5的偏离度（适度偏离，不追高）
-// 4. 最近3根K线的涨跌方向一致性
-// 5. 成交量配合（可选，简化）
-// 方向由BTC决定；如果是上涨，则只考虑做多评分；下跌只考虑做空评分。
-function score5mTrend(k5m, direction) {
+// ===== 核心：5m趋势评分（双向，不依赖BTC） =====
+// 自动判断该币种是适合做多还是做空，并评分
+function score5mTrendAuto(k5m) {
     const closes = k5m.c;
     const opens = k5m.o;
     const highs = k5m.h;
@@ -193,7 +158,14 @@ function score5mTrend(k5m, direction) {
     const curEma5 = ema5[last];
     const curEma9 = ema9[last];
 
-    // ---- 1. 站稳EMA5连续根数（做多：收盘>EMA5；做空：收盘<EMA5） ----
+    // ---- 先判断方向：EMA5>EMA9 视为多头倾向，EMA5<EMA9 视为空头倾向 ----
+    const isBull = curEma5 > curEma9;
+    const isBear = curEma5 < curEma9;
+    if (!isBull && !isBear) return null; // 完全相等（极少）跳过
+
+    const direction = isBull ? 'LONG' : 'SHORT';
+
+    // ---- 1. 站稳EMA5连续根数 ----
     let streak = 0;
     for (let i = last; i >= 0; i--) {
         if (isNaN(ema5[i])) break;
@@ -201,25 +173,17 @@ function score5mTrend(k5m, direction) {
         else if (direction === 'SHORT' && closes[i] < ema5[i]) streak++;
         else break;
     }
-    // 最少5根才算有效趋势
-    if (streak < 5) return null;
+    if (streak < 5) return null; // 最少5根
 
     // ---- 2. EMA5与EMA9排列强度 ----
-    // 做多：EMA5 > EMA9，差距越大越好；做空：EMA5 < EMA9，差距越大越好
-    const emaGap = Math.abs(curEma5 - curEma9) / curClose * 100; // 百分比
-    // 差距太小说明趋势弱，至少要0.05%
+    const emaGap = Math.abs(curEma5 - curEma9) / curClose * 100;
     if (emaGap < 0.05) return null;
 
-    const isBullishAlign = curEma5 > curEma9;
-    const isBearishAlign = curEma5 < curEma9;
-    if (direction === 'LONG' && !isBullishAlign) return null;
-    if (direction === 'SHORT' && !isBearishAlign) return null;
-
-    // ---- 3. 价格相对EMA5偏离度（做多：价格在EMA5上方但不能太远；做空相反） ----
+    // ---- 3. 价格相对EMA5偏离度 ----
     let deviation = 0;
     if (direction === 'LONG') {
         deviation = (curClose - curEma5) / curEma5 * 100;
-        if (deviation < 0.02 || deviation > 1.2) return null; // 太近没启动，太远追高
+        if (deviation < 0.02 || deviation > 1.2) return null;
     } else {
         deviation = (curEma5 - curClose) / curEma5 * 100;
         if (deviation < 0.02 || deviation > 1.2) return null;
@@ -231,56 +195,37 @@ function score5mTrend(k5m, direction) {
         if (closes[i] > opens[i]) upCount++;
         else if (closes[i] < opens[i]) downCount++;
     }
-    let consistency = 0;
-    if (direction === 'LONG') consistency = upCount; // 0~3
-    else consistency = downCount;
+    let consistency = direction === 'LONG' ? upCount : downCount;
 
-    // ---- 5. 近期涨跌幅动能（最近5根） ----
+    // ---- 5. 近5根动能 ----
     const idx5ago = Math.max(0, n - 6);
     const change5 = (closes[last] - closes[idx5ago]) / closes[idx5ago] * 100;
-    let momentumOk = false;
-    if (direction === 'LONG' && change5 > 0.1) momentumOk = true;
-    if (direction === 'SHORT' && change5 < -0.1) momentumOk = true;
-    if (!momentumOk) return null;
+    if (direction === 'LONG' && change5 <= 0.1) return null;
+    if (direction === 'SHORT' && change5 >= -0.1) return null;
 
-    // ===== 综合评分（满分100） =====
+    // ===== 综合评分 =====
     let score = 0;
-
-    // 站稳根数：每根+4分，最多40分（10根封顶）
-    score += Math.min(streak * 4, 40);
-
-    // EMA5-9差距：最大25分（差距0.5%以上满分）
-    score += Math.min(emaGap / 0.5 * 25, 25);
-
-    // 偏离度：适度最佳（0.1%~0.6%），给最多15分
+    score += Math.min(streak * 4, 40);                               // 站稳根数
+    score += Math.min(emaGap / 0.5 * 25, 25);                        // EMA差距
     const devScore = 15 * Math.max(0, 1 - Math.abs(deviation - 0.35) / 0.85);
-    score += Math.min(devScore, 15);
-
-    // 一致性：3根全对+10分
-    score += consistency * 3.33;
-
-    // 动能：涨幅越大给分越高（最多10分）
-    if (direction === 'LONG') score += Math.min(change5 * 5, 10);
+    score += Math.min(devScore, 15);                                  // 偏离度
+    score += consistency * 3.33;                                     // 一致性
+    if (direction === 'LONG') score += Math.min(change5 * 5, 10);    // 动能
     else score += Math.min(Math.abs(change5) * 5, 10);
-
     score = Math.round(Math.min(score, 100));
 
-    // 止盈止损（趋势跟随策略，窄止盈）
-    let stopLoss, tp;
-    // 用最近3根K线的高低点作为参考
+    // ===== 止盈止损（窄止盈） =====
     const recentLow = Math.min(...lows.slice(-4));
     const recentHigh = Math.max(...highs.slice(-4));
-
+    let stopLoss, tp;
     if (direction === 'LONG') {
-        // 止损放在EMA9下方一点，或者近期低点下方
         stopLoss = Math.min(curEma9 * 0.998, recentLow * 0.997);
         if (stopLoss >= curClose) stopLoss = curClose * 0.993;
-        // 窄止盈：0.4% ~ 0.6%
-        tp = curClose * 1.005;
+        tp = curClose * 1.005; // 窄止盈 +0.5%
     } else {
         stopLoss = Math.max(curEma9 * 1.002, recentHigh * 1.003);
         if (stopLoss <= curClose) stopLoss = curClose * 1.007;
-        tp = curClose * 0.995;
+        tp = curClose * 0.995; // 窄止盈 -0.5%
     }
 
     const risk = Math.abs(curClose - stopLoss);
@@ -289,7 +234,7 @@ function score5mTrend(k5m, direction) {
     if (risk > 0) rr = (reward / risk).toFixed(1);
 
     return {
-        streak, emaGap: emaGap.toFixed(3), deviation: deviation.toFixed(3),
+        direction, streak, emaGap: emaGap.toFixed(3), deviation: deviation.toFixed(3),
         change5: change5.toFixed(2), score, curClose,
         ema5: curEma5, ema9: curEma9,
         stopLoss, tp, rr
@@ -300,32 +245,9 @@ async function runScan() {
   if (isScanning) return;
   isScanning = true;
   
-  $('st1').innerHTML = '<span class="sp"></span>获取BTC方向 + 扫描5m趋势评分...';
+  $('st1').innerHTML = '<span class="sp"></span>扫描5m趋势评分中...';
   $('list-area').style.display = 'none';
 
-  const btc = await getBtcDirection();
-  const btcDirEl = $('btcDir');
-  if (btc.dir === 'UP') {
-      btcDirEl.className = 'up';
-      btcDirEl.innerText = `📈 上涨 ${btc.change.toFixed(2)}% → 只做多`;
-  } else if (btc.dir === 'DOWN') {
-      btcDirEl.className = 'down';
-      btcDirEl.innerText = `📉 下跌 ${btc.change.toFixed(2)}% → 只做空`;
-  } else {
-      btcDirEl.className = 'flat';
-      btcDirEl.innerText = `➖ 横盘 ${btc.change.toFixed(2)}% → 暂停`;
-  }
-
-  if (btc.dir === 'FLAT') {
-      $('st1').innerText = 'BTC横盘，方向不明，暂停扫描';
-      $('out-cards').innerHTML = `<div class="empty" style="margin-top:15px;">BTC前30分钟涨跌不足0.15%，方向不明，按策略不交易。等待BTC选择方向。</div>`;
-      $('list-area').style.display = 'block';
-      $('percent').innerText = '100%';
-      isScanning = false;
-      return;
-  }
-
-  const direction = btc.dir === 'UP' ? 'LONG' : 'SHORT';
   const targetInstIds = FIXED_COINS.map(c => c.replace('USDT', '-USDT-SWAP'));
   let allValidSignals = [];
   let done = 0;
@@ -339,7 +261,7 @@ async function runScan() {
     if (res5m.err || !res5m.data || res5m.data.length < 10) return;
 
     const k5m = parseK(res5m.data);
-    const result = score5mTrend(k5m, direction);
+    const result = score5mTrendAuto(k5m);
     if (!result) return;
 
     const base = instId.split('-')[0];
@@ -348,7 +270,7 @@ async function runScan() {
     updateCache(base);
 
     allValidSignals.push({
-        base, direction, ...result, finalScore: result.score
+        base, ...result, finalScore: result.score
     });
   });
 
@@ -361,7 +283,7 @@ async function runScan() {
     const best = allValidSignals[0]; 
     const isLong = best.direction === 'LONG';
     const color = isLong ? '#3fb950' : '#f85149';
-    const dirTxt = isLong ? '做多 🚀 (顺BTC)' : '做空 🌊 (顺BTC)';
+    const dirTxt = isLong ? '做多 🚀' : '做空 🌊';
 
     let html = `
       <div class="card">
@@ -379,7 +301,6 @@ async function runScan() {
           <span>EMA5-9差距:</span> <b class="Y">${best.emaGap}%</b>
           <span>偏离EMA5:</span> <b class="N">${best.deviation}%</b>
           <span>5根动能:</span> <b class="${parseFloat(best.change5) >= 0 ? 'L' : 'S'}">${best.change5}%</b>
-          <span>BTC方向:</span> <b class="${btc.dir==='UP'?'L':'S'}">${btc.dir==='UP'?'上涨':'下跌'}</b>
           <span>EMA5:</span> <b>${px(best.ema5)}</b>
           <span>EMA9:</span> <b>${px(best.ema9)}</b>
           <span>建议止损:</span> <b class="Y">${px(best.stopLoss)}</b>
@@ -396,7 +317,7 @@ async function runScan() {
     
   } else {
     $('st1').innerText = `✅ 扫描完毕，暂无符合条件的5m趋势币种`;
-    $('out-cards').innerHTML = `<div class="empty" style="margin-top:15px;">当前BTC方向为${btc.dir==='UP'?'上涨':'下跌'}，但没有找到满足5m趋势评分条件的币种（站稳EMA5≥5根、EMA排列、动能等）。耐心等待！</div>`;
+    $('out-cards').innerHTML = `<div class="empty" style="margin-top:15px;">当前没有找到满足5m趋势评分条件的币种（站稳EMA5≥5根、EMA排列、动能等）。耐心等待！</div>`;
     $('list-area').style.display = 'block';
   }
 }
