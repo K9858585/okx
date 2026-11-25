@@ -24,14 +24,10 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 @keyframes r{to{transform:rotate(360deg)}}
 .empty{color:#8b949e;font-size:13px;padding:22px;text-align:center;border:1px dashed #30363d;border-radius:10px}
 .rank-card{background:#161b22;border:1px solid #30363d;border-radius:12px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
-.rank-card.top1{border-color:#ff9f0a;box-shadow:0 0 15px rgba(255,159,10,.12)}
-.rank-card.top2{border-color:#8b949e}
-.rank-card.top3{border-color:#cd7f32}
+.rank-card.entry-card{border-color:#3fb950;box-shadow:0 0 10px rgba(63,185,80,.1)}
 .rank-header{padding:12px 14px;cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;transition:background .15s}
 .rank-header:hover{background:#1c2330}
 .rh-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.rk{font-size:15px;font-weight:800;color:#8b949e;min-width:24px}
-.rk.gold{color:#ff9f0a}.rk.silver{color:#c9d1d9}.rk.bronze{color:#cd7f32}
 .coin{font-size:16px;font-weight:700;color:#fff}
 .dir{font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;border:1px solid}
 .dir.L{color:#3fb950;border-color:#3fb950;background:#0f2417}
@@ -51,9 +47,12 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:700}
 .tag.entry{background:#0f2417;color:#3fb950;border:1px solid #3fb950}
 .tag.near{background:#2a2210;color:#ff9f0a;border:1px solid #ff9f0a}
-.tag.trend{background:#0d1f33;color:#58a6ff;border:1px solid #58a6ff}
 .tag.wait{background:#21262d;color:#8b949e;border:1px solid #484f58}
 .warn-bar{background:rgba(218,54,51,0.1);border:1px solid #da3633;color:#f85149;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;text-align:center;}
+.top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 4px;}
+.top-actions span{font-size:14px;font-weight:700;color:#8b949e;}
+.btn-mini{background:#30363d;color:#c9d1d9;border:1px solid #484f58;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-mini:active{opacity:0.7}
 </style>
 </head>
 <body>
@@ -68,6 +67,11 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
   <div class="st"><span class="lbl">日线扫描状态</span><span class="val" id="scanStatus">未扫描</span></div>
   <div class="st"><span class="lbl">下次 15m 扫描</span><span class="timer" id="countdown">--:--</span></div>
   <div class="st"><span class="lbl">状态 / 警报</span><span class="val" id="progress">-</span></div>
+</div>
+
+<div class="top-actions" id="listHeader" style="display:none;">
+  <span>📊 监控列表 (按得分排名)</span>
+  <button class="btn-mini" onclick="collapseAll()">⬆️ 一键收起</button>
 </div>
 
 <div id="ranking"><div class="empty">尚未扫描，点击上方按钮获取当前成交额前50的币种，并定日线大方向。</div></div>
@@ -189,7 +193,6 @@ async function batchFetch(tasks, concurrency=8){
   return results;
 }
 
-// ============ 获取前50活跃币 ============
 async function getTop50Coins() {
     const res = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
     if (res.err || !res.data || res.data.length === 0) return [];
@@ -200,10 +203,9 @@ async function getTop50Coins() {
         const volB = parseFloat(b.volCcy24h || 0) * parseFloat(b.last || 0);
         return volB - volA;
     });
-    return usdtList.slice(0, 50).map(t => t.instId); // 取前50
+    return usdtList.slice(0, 50).map(t => t.instId);
 }
 
-// ============ 日线定大方向 (EMA5 vs EMA20) ============
 function analyzeDaily(kd){
   const {c}=kd;
   const n=c.length;
@@ -215,13 +217,12 @@ function analyzeDaily(kd){
 
   const lastE5=ema5[n-1], lastE20=ema20[n-1], lastC=c[n-1];
   
-  // 基础的大方向定势
   if(lastE5>lastE20 && lastC>lastE20) return { direction: 'LONG', ema5: lastE5, ema20: lastE20, curClose: lastC };
   if(lastE5<lastE20 && lastC<lastE20) return { direction: 'SHORT', ema5: lastE5, ema20: lastE20, curClose: lastC };
   return null;
 }
 
-// ============ 1H 看回调：EMA5拐头，即将交叉 ============
+// ============ 1H 看回调：EMA5拐头，即将与EMA20交叉 ============
 function check1hPullback(k1h, direction) {
     const {c} = k1h;
     const n = c.length;
@@ -231,26 +232,25 @@ function check1hPullback(k1h, direction) {
     const ema20 = calcEMA(c, 20);
     
     const curE5 = ema5[n-1], prevE5 = ema5[n-2];
-    const curE20 = ema20[n-1], prevE20 = ema20[n-2];
+    const curE20 = ema20[n-1];
     
     if (direction === 'LONG') {
-        // 多头回调：EMA5在EMA20下方或附近，但斜率拐头向上
+        // 多头回调：EMA5 在 EMA20 下方附近，但 EMA5 斜率向上拐头
         const isTurnUp = curE5 > prevE5;
-        // 两线距离极近（0.6%以内），即将金叉
         const gap = (curE20 - curE5) / curE20; 
-        const isNearCross = gap > 0 && gap < 0.006;
+        const isNearCross = gap > 0 && gap < 0.006; // 距离0.6%以内
         
         if (isTurnUp && isNearCross) {
-            return { ready: true, msg: "1H EMA5拐头向上，即将金叉", target: curE20 };
+            return { ready: true, msg: "1H EMA5拐头向上，即将金叉", gap: gap, slope: (curE5-prevE5)/prevE5 };
         }
     } else {
-        // 空头反弹：EMA5在EMA20上方或附近，但斜率拐头向下
+        // 空头反弹：EMA5 在 EMA20 上方附近，但 EMA5 斜率向下拐头
         const isTurnDown = curE5 < prevE5;
         const gap = (curE5 - curE20) / curE20;
         const isNearCross = gap > 0 && gap < 0.006;
         
         if (isTurnDown && isNearCross) {
-            return { ready: true, msg: "1H EMA5拐头向下，即将死叉", target: curE20 };
+            return { ready: true, msg: "1H EMA5拐头向下，即将死叉", gap: gap, slope: (prevE5-curE5)/prevE5 };
         }
     }
     return { ready: false, msg: "等待1H回调拐头" };
@@ -267,17 +267,27 @@ function check15mEntry(k15m, direction) {
     const curO = o[n-1];
     const curE5 = ema5[n-1];
 
+    let isTrigger = false;
+    let reason = '';
+    
     if (direction === 'LONG') {
-        // 做多：15m最新一根为阳线，且收盘价高于前一根，且站上EMA5
         if (curC > curO && curC > prevC && curC > curE5) {
-            return { signal: 'ENTRY', reason: '15m 收出止跌阳线，且站上EMA5' };
+            isTrigger = true;
+            reason = '15m收出止跌阳线，且站上EMA5';
         }
     } else {
-        // 做空：15m最新一根为阴线，且收盘价低于前一根，且跌破EMA5
         if (curC < curO && curC < prevC && curC < curE5) {
-            return { signal: 'ENTRY', reason: '15m 收出滞涨阴线，且跌破EMA5' };
+            isTrigger = true;
+            reason = '15m收出滞涨阴线，且跌破EMA5';
         }
     }
+    
+    if (isTrigger) {
+        // 计算 K 线实体力度（用于打分）
+        const bodySize = Math.abs(curC - curO) / curC * 100; 
+        return { signal: 'ENTRY', reason, bodySize };
+    }
+    
     return { signal: 'WAIT', reason: '1H已就绪，等待15m反转K线' };
 }
 
@@ -315,14 +325,13 @@ async function scanDaily(force=false){
   const dailyRaw = await batchFetch(tasks, 8);
   state.dailyResults = dailyRaw.filter(Boolean);
   
-  // 初始化 1H 和 15m 的状态为等待
   state.dailyResults.forEach(r => {
-      state.entryMap[r.base] = { signal: 'WAIT', reason: '等待1H回调' };
+      state.entryMap[r.base] = { signal: 'WAIT', reason: '等待1H回调', score: 0 };
   });
 
   state.scanDate = todayStr();
   state.scanTime = Date.now();
-  localStorage.setItem('okx_daily_scan_v10', JSON.stringify({
+  localStorage.setItem('okx_daily_scan_v11', JSON.stringify({
     date: state.scanDate, time: state.scanTime, results: state.dailyResults
   }));
 
@@ -337,15 +346,17 @@ async function scanDaily(force=false){
   isScanningDaily=false;
 }
 
-// ============ 1H + 15m 扣扳机监控 ============
+// ============ 1H + 15m 扣扳机监控与打分 ============
 async function scanEntry(){
   if(isScanningEntry||state.dailyResults.length===0) return;
   isScanningEntry=true;
   const list=state.dailyResults;
   let done=0;
   
+  // 暂存本次扫描结果
+  let tempResults = [];
+
   const tasks = list.map(item => (async()=>{
-    // 第一步：查 1H
     const res1h = await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=1H&limit=30`);
     done++;
     $('progress').innerText = `监控中 ${done}/${list.length}`;
@@ -355,25 +366,46 @@ async function scanEntry(){
     const pullback = check1hPullback(k1h, item.direction);
     
     if (!pullback.ready) {
-        state.entryMap[item.base] = { signal: 'WAIT', reason: pullback.msg };
+        tempResults.push({ base: item.base, data: { signal: 'WAIT', reason: pullback.msg, score: 0 } });
         return;
     }
     
-    // 第二步：1H 满足了，查 15m
+    // 1H 满足了，查 15m
     const res15m = await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=15m&limit=20`);
     if(res15m.err || !res15m.data || res15m.data.length < 10) return;
     const k15m = parseK(res15m.data);
     const entry = check15mEntry(k15m, item.direction);
     
-    // 保存最终状态
     if (entry.signal === 'ENTRY') {
-        state.entryMap[item.base] = { signal: 'ENTRY', reason: entry.reason };
+        // ===== 核心：打分系统 =====
+        // 1. 日线趋势强弱（EMA5 与 EMA20 偏离度，最大40分）
+        const dailyGap = Math.abs(item.ema5 - item.ema20) / item.ema20 * 100;
+        const scoreDaily = Math.min(dailyGap * 15, 40); // 偏离越大趋势越强
+
+        // 2. 1H 贴近金叉程度（距离越近越好，最大30分）
+        const score1H = Math.max(0, 30 - pullback.gap * 1000 * 5); // gap 0.1% -> 25分，gap 0.6% -> 0分
+
+        // 3. 15m 实体反转力度（实体越大，动能越强，最大30分）
+        const score15m = Math.min(entry.bodySize * 100, 30); // 0.3%实体 -> 30分
+
+        const totalScore = Math.round(scoreDaily + score1H + score15m);
+        
+        tempResults.push({ 
+            base: item.base, 
+            data: { signal: 'ENTRY', reason: entry.reason, score: totalScore, detail: { scoreDaily, score1H, score15m } } 
+        });
     } else {
-        state.entryMap[item.base] = { signal: 'NEAR', reason: pullback.msg + '，' + entry.reason };
+        tempResults.push({ base: item.base, data: { signal: 'NEAR', reason: pullback.msg + '，' + entry.reason, score: 0 } });
     }
   }));
   
   await batchFetch(tasks, 8);
+  
+  // 更新 state
+  tempResults.forEach(res => {
+      state.entryMap[res.base] = res.data;
+  });
+  
   isScanningEntry=false;
   render();
   
@@ -396,29 +428,53 @@ async function scanEntry(){
 function render(){
   if(state.dailyResults.length===0){
     $('ranking').innerHTML='<div class="empty">今日暂无符合条件的币种（前50无明确EMA5/20日线趋势）。</div>';
+    $('listHeader').style.display = 'none';
     return;
   }
+  
+  // ===== 核心：根据状态和得分重新排序 =====
+  // 优先级：ENTRY (按得分降序) > NEAR (按名称) > WAIT (按名称)
+  state.dailyResults.sort((a, b) => {
+      const entryA = state.entryMap[a.base] || { signal: 'WAIT', score: 0 };
+      const entryB = state.entryMap[b.base] || { signal: 'WAIT', score: 0 };
+      
+      const weight = { 'ENTRY': 3, 'NEAR': 2, 'WAIT': 1 };
+      const wA = weight[entryA.signal];
+      const wB = weight[entryB.signal];
+      
+      if (wA !== wB) return wB - wA; // 权重高的在前
+      if (entryA.signal === 'ENTRY') return entryB.score - entryA.score; // ENTRY 按分降序
+      return a.base.localeCompare(b.base); // 其他按字母顺序
+  });
+
+  $('listHeader').style.display = 'flex';
   let html='';
   state.dailyResults.forEach((r,idx)=>{
     const dirTxt=r.direction==='LONG'?'多':'空';
     const dirCls=r.direction==='LONG'?'L':'S';
-    const entry=state.entryMap[r.base]||{signal:'WAIT',reason:'等待1H回调'};
+    const entry=state.entryMap[r.base]||{signal:'WAIT',reason:'等待1H回调',score:0};
     const eTag = {ENTRY:'<span class="tag entry">🎯 扣动扳机</span>',
                   NEAR:'<span class="tag near">⏳ 即将交叉</span>',
                   WAIT:'<span class="tag wait">⏸ 等待</span>'}[entry.signal]||'';
     const openCls = entry.signal==='ENTRY'?'open':'';
+    const cardCls = entry.signal==='ENTRY'?'entry-card':'';
+    
+    // 得分徽章（仅在 ENTRY 时显示）
+    const scoreHtml = entry.signal === 'ENTRY' ? `<span class="score-badge">${entry.score}分</span>` : '';
+    
     html+=`
-    <div class="rank-card">
+    <div class="rank-card ${cardCls}">
       <div class="rank-header" onclick="toggleCard('${r.base}')">
         <div>
           <div class="rh-left">
             <span class="coin">${r.base}</span>
             <span class="dir ${dirCls}">${dirTxt}</span>
             ${eTag}
+            ${scoreHtml}
           </div>
           <div class="rh-mid">日线收盘: ${px(r.curClose)}</div>
         </div>
-        <span class="arrow" id="arrow-${r.base}">▼</span>
+        <span class="arrow" id="arrow-${r.base}">${openCls?'▲':'▼'}</span>
       </div>
       <div class="rank-body ${openCls}" id="body-${r.base}">
         <div class="sec">
@@ -434,6 +490,11 @@ function render(){
           <div class="sec-body">
             <div class="row"><span>当前状态</span><b>${eTag}</b></div>
             <div class="row"><span>详细说明</span><b style="text-align:right;max-width:65%">${entry.reason}</b></div>
+            ${entry.signal==='ENTRY' && entry.detail ? `
+            <div class="row" style="border-top:1px dashed #30363d; margin-top:6px; padding-top:6px;">
+                <span>得分构成</span>
+                <b class="Y">日线 ${entry.detail.scoreDaily.toFixed(0)} + 1H ${entry.detail.score1H.toFixed(0)} + 15m ${entry.detail.score15m.toFixed(0)}</b>
+            </div>` : ''}
           </div>
         </div>
       </div>
@@ -453,9 +514,17 @@ window.toggleCard=function(base){
   }
 };
 
+// 一键收起所有卡片
+window.collapseAll = function() {
+    const bodies = document.querySelectorAll('.rank-body');
+    const arrows = document.querySelectorAll('.arrow');
+    bodies.forEach(b => b.classList.remove('open'));
+    arrows.forEach(a => a.textContent = '▼');
+};
+
 function restoreCache(){
   try{
-    const raw=localStorage.getItem('okx_daily_scan_v10');
+    const raw=localStorage.getItem('okx_daily_scan_v11');
     if(!raw) return false;
     const cached=JSON.parse(raw);
     if(cached.date!==todayStr()) return false;
@@ -490,7 +559,7 @@ function stopTimer(){
 }
 function scheduleNext(){
   const now=Date.now();
-  const step=15*60*1000; // 15分钟周期
+  const step=15*60*1000; // 15分钟
   const next=Math.ceil(now/step)*step+2000;
   if(timerHandle) clearTimeout(timerHandle);
   timerHandle=setTimeout(async()=>{
