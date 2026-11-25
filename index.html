@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 1h定趋势 · 5m回调扣扳机</title>
+<title>欧易 前50主流币 · 日线定向 · 1H回调 · 15m扣扳机</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:720px;margin:0 auto}
@@ -53,43 +53,36 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .tag.near{background:#2a2210;color:#ff9f0a;border:1px solid #ff9f0a}
 .tag.trend{background:#0d1f33;color:#58a6ff;border:1px solid #58a6ff}
 .tag.wait{background:#21262d;color:#8b949e;border:1px solid #484f58}
-.info-line{font-size:12px;color:#8b949e;margin-top:3px}
 .warn-bar{background:rgba(218,54,51,0.1);border:1px solid #da3633;color:#f85149;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;text-align:center;}
 </style>
 </head>
 <body>
 
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 1h定趋势 · 5m回调扣扳机</h2>
-  <div class="warn-bar">📢 提示：请保持页面前台运行或添加到主屏幕，并允许“发送通知”以防漏单。</div>
+  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 日线定向 · 1H回调 · 15m扣扳机</h2>
+  <div class="warn-bar">📢 提示：请保持页面前台运行，允许“发送通知”以免漏掉入场警报。</div>
   
-  <button class="btn b1" id="btnScan">🔍 扫描 1H 趋势（>20万成交额）</button>
-  <button class="btn b3" id="btnTimer">⏱️ 开启 5m 扣扳机巡航</button>
-  <button class="btn b4" id="btnRescan" style="display:none">🔄 强制重扫</button>
-  <div class="st"><span class="lbl">趋势扫描状态</span><span class="val" id="scanStatus">未扫描</span></div>
-  <div class="st"><span class="lbl">下次 5m 扫描</span><span class="timer" id="countdown">--:--</span></div>
+  <button class="btn b1" id="btnScan">🔍 扫描前50主流币（定大方向）</button>
+  <button class="btn b3" id="btnTimer">⏱️ 开启 15m 扣扳机巡航</button>
+  <button class="btn b4" id="btnRescan" style="display:none">🔄 强制重扫日线</button>
+  <div class="st"><span class="lbl">日线扫描状态</span><span class="val" id="scanStatus">未扫描</span></div>
+  <div class="st"><span class="lbl">下次 15m 扫描</span><span class="timer" id="countdown">--:--</span></div>
   <div class="st"><span class="lbl">状态 / 警报</span><span class="val" id="progress">-</span></div>
 </div>
 
-<div id="ranking"><div class="empty">尚未扫描，点击上方按钮筛选 24h 成交额 > 20 万 USDT 的币种，并开始 1H 趋势扫描。</div></div>
+<div id="ranking"><div class="empty">尚未扫描，点击上方按钮获取当前成交额前50的币种，并定日线大方向。</div></div>
 
 <script>
-const BACKUP_COINS = [
-  "BTCUSDT","ETHUSDT","SOLUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","AVAXUSDT","LINKUSDT","DOTUSDT","SUIUSDT"
-];
-
 const $=i=>document.getElementById(i);
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(6);
 let audioCtx=null;
 let timerOn=false;
 let timerHandle=null, countdownHandle=null;
-let isScanningTrend=false, isScanningEntry=false;
+let isScanningDaily=false, isScanningEntry=false;
 let originalTitle = document.title;
 
-let instrumentListMap = {}; 
-
 const state = {
-  trendResults: [],
+  dailyResults: [],
   entryMap: {},
   scanDate: '',
   scanTime: 0
@@ -100,6 +93,7 @@ function todayStr(){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
+// ============ 5秒长响警报 ============
 function playAlert() {
   if (audioCtx) {
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -121,8 +115,8 @@ function playAlert() {
   }
 
   if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("🚨 5m扣扳机警报", {
-      body: "5m级别出现入场信号，请立即查看！",
+    new Notification("🚨 15m扣扳机警报", {
+      body: "1H回调即将交叉，15m出现入场信号，请立即查看！",
       tag: "entry-alert",
       renotify: true
     });
@@ -182,7 +176,7 @@ function calcEMA(closes,period){
   for(let i=period;i<closes.length;i++) ema.push(closes[i]*k+ema[ema.length-1]*(1-k));
   return new Array(period-1).fill(NaN).concat(ema);
 }
-async function batchFetch(tasks, concurrency=10){
+async function batchFetch(tasks, concurrency=8){
   const results=new Array(tasks.length).fill(null);
   let idx=0;
   async function worker(){
@@ -195,46 +189,25 @@ async function batchFetch(tasks, concurrency=10){
   return results;
 }
 
-async function loadInstrumentsInfo() {
-    if (Object.keys(instrumentListMap).length > 0) return;
-    const res = await fetchOKX('/api/v5/public/instruments?instType=SWAP');
-    if (res.err || !res.data) return;
-    res.data.forEach(item => {
-        instrumentListMap[item.instId] = { listTime: parseInt(item.listTime) || 0 };
-    });
-}
-
-// ============ 获取 24h 成交额 > 20万 USDT 的币种 ============
-async function getActiveCoinsByVolume() {
+// ============ 获取前50活跃币 ============
+async function getTop50Coins() {
     const res = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
-    if (res.err || !res.data || res.data.length === 0) {
-        return BACKUP_COINS.map(c=>c.replace('USDT','-USDT-SWAP'));
-    }
-    const activeList = res.data.filter(t => {
-        if (!t.instId.endsWith('USDT-SWAP')) return false;
-        const volCcy24h = parseFloat(t.volCcy24h || 0);
-        const lastPrice = parseFloat(t.last || 0);
-        const turnoverUSDT = volCcy24h * lastPrice;
-        return turnoverUSDT >= 200000; // 20万门槛
+    if (res.err || !res.data || res.data.length === 0) return [];
+    
+    const usdtList = res.data.filter(t => t.instId.endsWith('USDT-SWAP'));
+    usdtList.sort((a,b) => {
+        const volA = parseFloat(a.volCcy24h || 0) * parseFloat(a.last || 0);
+        const volB = parseFloat(b.volCcy24h || 0) * parseFloat(b.last || 0);
+        return volB - volA;
     });
-    return activeList.map(t => t.instId);
+    return usdtList.slice(0, 50).map(t => t.instId); // 取前50
 }
 
-// ============ 1H 定趋势（阳线占多 + 影线不破EMA5） ============
-function analyzeTrend1h(kh, instId){
-  const info = instrumentListMap[instId];
-  if (info && info.listTime) {
-      const daysOnline = (Date.now() - info.listTime) / (1000 * 3600 * 24);
-      if (daysOnline < 7) return null; 
-  }
-
-  const {o,h,l,c}=kh;
+// ============ 日线定大方向 (EMA5 vs EMA20) ============
+function analyzeDaily(kd){
+  const {c}=kd;
   const n=c.length;
   if(n<25) return null;
-  
-  for (let i = Math.max(0, n - 10); i < n; i++) {
-      if (c[i] > 0 && (h[i] - l[i]) / c[i] > 0.10) return null; // 过滤短期极端振幅
-  }
 
   const ema5=calcEMA(c,5);
   const ema20=calcEMA(c,20);
@@ -242,203 +215,165 @@ function analyzeTrend1h(kh, instId){
 
   const lastE5=ema5[n-1], lastE20=ema20[n-1], lastC=c[n-1];
   
-  let direction=null;
-  if(lastE5>lastE20 && lastC>lastE5 && (lastE5-lastE20)/lastE20 < 0.03) direction='LONG'; 
-  else if(lastE5<lastE20 && lastC<lastE5 && (lastE20-lastE5)/lastE20 < 0.03) direction='SHORT';
-  if(!direction) return null;
+  // 基础的大方向定势
+  if(lastE5>lastE20 && lastC>lastE20) return { direction: 'LONG', ema5: lastE5, ema20: lastE20, curClose: lastC };
+  if(lastE5<lastE20 && lastC<lastE20) return { direction: 'SHORT', ema5: lastE5, ema20: lastE20, curClose: lastC };
+  return null;
+}
 
-  // 连续站稳根数 + 影线严格不破EMA5
-  let streak=0;
-  for(let i=n-1;i>=0;i--){
-    if(isNaN(ema5[i])||isNaN(ema20[i])) break;
-    if(direction==='LONG'){
-      if(l[i] > ema5[i] && c[i] > ema5[i]) streak++;
-      else break;
-    } else {
-      if(h[i] < ema5[i] && c[i] < ema5[i]) streak++;
-      else break;
-    }
-  }
-  if(streak<3) return null;
-
-  // 核心：阴阳线比例检查
-  const cnt=Math.min(streak, 10);
-  const st=n-cnt;
-  let upCount = 0, downCount = 0;
-  let sumBodyRatio=0;
-  
-  for(let i=st;i<n;i++){
-    if (c[i] > o[i]) upCount++;
-    else if (c[i] < o[i]) downCount++;
+// ============ 1H 看回调：EMA5拐头，即将交叉 ============
+function check1hPullback(k1h, direction) {
+    const {c} = k1h;
+    const n = c.length;
+    if(n < 20) return { ready: false, msg: "1H数据不足" };
     
-    const range=h[i]-l[i];
-    if(range<=0){ sumBodyRatio+=1; continue; }
-    sumBodyRatio += Math.abs(c[i]-o[i])/range;
-  }
-  
-  // 多头必须阳线占多，空头必须阴线占多
-  if (direction === 'LONG' && upCount <= downCount) return null;
-  if (direction === 'SHORT' && downCount <= upCount) return null;
-
-  const avgBodyRatio=sumBodyRatio/cnt;
-  const streakScore=Math.min(streak*6,60);
-  const shadowScore=avgBodyRatio*40;
-  const score = Math.round(streakScore + shadowScore);
-
-  return {
-    direction, streak, avgBodyRatio, score,
-    ema5:lastE5, ema20:lastE20, curClose:lastC,
-    upCount, downCount
-  };
-}
-
-// ============ 5m 反向回调找支撑/压力区 ============
-function find5mPullbackZone(k5m, direction) {
-    const {h,l,c} = k5m;
-    const n = h.length;
-    if(n < 30) return {supports:[], resistances:[]};
-    const curC = c[n-1];
-    const ema20 = calcEMA(c, 20)[n-1];
-
-    const swingHighs = [], swingLows = [];
-    const w = 3;
-    for(let i=w; i<n-w; i++){
-        let isH=true, isL=true;
-        for(let j=1; j<=w; j++){
-            if(h[i]<=h[i-j] || h[i]<=h[i+j]) isH=false;
-            if(l[i]>=l[i-j] || l[i]>=l[i+j]) isL=false;
-        }
-        if(isH) swingHighs.push(h[i]);
-        if(isL) swingLows.push(l[i]);
-    }
-
+    const ema5 = calcEMA(c, 5);
+    const ema20 = calcEMA(c, 20);
+    
+    const curE5 = ema5[n-1], prevE5 = ema5[n-2];
+    const curE20 = ema20[n-1], prevE20 = ema20[n-2];
+    
     if (direction === 'LONG') {
-        let supports = swingLows.filter(x => x < curC).sort((a,b)=>b-a).slice(0, 2);
-        if (ema20 < curC) supports.push(ema20);
-        supports.sort((a,b)=>b-a); 
-        return { supports, resistances: [] };
+        // 多头回调：EMA5在EMA20下方或附近，但斜率拐头向上
+        const isTurnUp = curE5 > prevE5;
+        // 两线距离极近（0.6%以内），即将金叉
+        const gap = (curE20 - curE5) / curE20; 
+        const isNearCross = gap > 0 && gap < 0.006;
+        
+        if (isTurnUp && isNearCross) {
+            return { ready: true, msg: "1H EMA5拐头向上，即将金叉", target: curE20 };
+        }
     } else {
-        let resistances = swingHighs.filter(x => x > curC).sort((a,b)=>a-b).slice(0, 2);
-        if (ema20 > curC) resistances.push(ema20);
-        resistances.sort((a,b)=>a-b);
-        return { supports: [], resistances };
+        // 空头反弹：EMA5在EMA20上方或附近，但斜率拐头向下
+        const isTurnDown = curE5 < prevE5;
+        const gap = (curE5 - curE20) / curE20;
+        const isNearCross = gap > 0 && gap < 0.006;
+        
+        if (isTurnDown && isNearCross) {
+            return { ready: true, msg: "1H EMA5拐头向下，即将死叉", target: curE20 };
+        }
     }
+    return { ready: false, msg: "等待1H回调拐头" };
 }
 
-// ============ 5m 回调扣扳机 ============
-function check5mTrigger(k5m, direction, zone){
-    const {o,h,l,c}=k5m;
-    const n=c.length;
-    if(n<10) return {signal:'WAIT',reason:'数据不足'};
+// ============ 15m 回调入场扣扳机 ============
+function check15mEntry(k15m, direction) {
+    const {o, c} = k15m;
+    const n = c.length;
+    if(n < 10) return { signal:'WAIT', reason:'15m数据不足' };
     
     const ema5 = calcEMA(c, 5);
     const curC = c[n-1], prevC = c[n-2];
     const curO = o[n-1];
-    const curE5 = ema5[n-1], prevE5 = ema5[n-2];
+    const curE5 = ema5[n-1];
 
-    if(direction === 'LONG'){
-        const nearS = zone.supports.find(s => curC >= s*0.99 && curC <= s*1.01);
-        const isTrigger = curC > curO && curC > prevC && curC > curE5 && curE5 > prevE5;
-
-        if (nearS && isTrigger) {
-            return {signal:'ENTRY', reason:`回踩5m支撑 ${px(nearS)} 附近，5m出现止跌阳线扣动扳机`, support:nearS};
+    if (direction === 'LONG') {
+        // 做多：15m最新一根为阳线，且收盘价高于前一根，且站上EMA5
+        if (curC > curO && curC > prevC && curC > curE5) {
+            return { signal: 'ENTRY', reason: '15m 收出止跌阳线，且站上EMA5' };
         }
-        if (nearS) {
-            return {signal:'NEAR', reason:`已到达5m支撑 ${px(nearS)} 附近，等待5m收阳扣动扳机`, support:nearS};
-        }
-        return {signal:'WAIT', reason:'等待价格反向回调至5m支撑区'};
     } else {
-        const nearR = zone.resistances.find(r => curC <= r*1.01 && curC >= r*0.99);
-        const isTrigger = curC < curO && curC < prevC && curC < curE5 && curE5 < prevE5;
-
-        if (nearR && isTrigger) {
-            return {signal:'ENTRY', reason:`反弹至5m压力 ${px(nearR)} 附近，5m出现滞涨阴线扣动扳机`, resistance:nearR};
+        // 做空：15m最新一根为阴线，且收盘价低于前一根，且跌破EMA5
+        if (curC < curO && curC < prevC && curC < curE5) {
+            return { signal: 'ENTRY', reason: '15m 收出滞涨阴线，且跌破EMA5' };
         }
-        if (nearR) {
-            return {signal:'NEAR', reason:`已到达5m压力 ${px(nearR)} 附近，等待5m收阴扣动扳机`, resistance:nearR};
-        }
-        return {signal:'WAIT', reason:'等待价格反向反弹至5m压力区'};
     }
+    return { signal: 'WAIT', reason: '1H已就绪，等待15m反转K线' };
 }
 
-// ============ 主流程 ============
-async function scanTrend(force=false){
-  if(isScanningTrend) return;
-  isScanningTrend=true;
+// ============ 日线扫描主流程 ============
+async function scanDaily(force=false){
+  if(isScanningDaily) return;
+  isScanningDaily=true;
   $('btnScan').disabled=true;
   $('btnRescan').disabled=true;
-  $('progress').innerHTML='<span class="sp"></span>获取活跃币与基础信息...';
+  $('progress').innerHTML='<span class="sp"></span>获取前50主流币...';
   $('scanStatus').innerText='扫描中';
 
-  await loadInstrumentsInfo();
-  const activeCoins = await getActiveCoinsByVolume();
+  const top50 = await getTop50Coins();
+  if (top50.length === 0) {
+      $('progress').innerText = '获取失败，请重试';
+      isScanningDaily = false;
+      $('btnScan').disabled=false;
+      return;
+  }
 
-  $('progress').innerHTML='<span class="sp"></span>1H 趋势扫描中...';
+  $('progress').innerHTML='<span class="sp"></span>日线定向中...';
   let done=0;
-  const tasks=activeCoins.map(inst=>(async()=>{
-    const res=await fetchOKX(`/api/v5/market/candles?instId=${inst}&bar=1H&limit=60`);
+  const tasks = top50.map(inst => (async()=>{
+    const res = await fetchOKX(`/api/v5/market/candles?instId=${inst}&bar=1D&limit=30`);
     done++;
-    $('progress').innerText=`1H 趋势 ${done}/${activeCoins.length} (${Math.round(done/activeCoins.length*100)}%)`;
-    if(res.err||!res.data||res.data.length<25) return null;
+    $('progress').innerText = `日线定向 ${done}/${top50.length}`;
+    if(res.err || !res.data || res.data.length < 25) return null;
     
-    const kh=parseK(res.data);
-    const a=analyzeTrend1h(kh, inst);
+    const kd = parseK(res.data);
+    const a = analyzeDaily(kd);
     if(!a) return null;
-    return {base:inst.split('-')[0], instId:inst, ...a};
+    return { base: inst.split('-')[0], instId: inst, ...a };
   }));
-  const trendRaw=await batchFetch(tasks,10);
-  const trendPass=trendRaw.filter(Boolean).sort((a,b)=>b.score-a.score);
-
-  const filtered=trendPass.filter(x=>x.score>=50);
-  $('progress').innerHTML=`<span class="sp"></span>5m 回调区分析 (${filtered.length}个)...`;
-
-  let done1=0;
-  const tasks1=filtered.map(item=>(async()=>{
-    const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=5m&limit=100`);
-    done1++;
-    $('progress').innerText=`5m 分析 ${done1}/${filtered.length}`;
-    if(res.err||!res.data||res.data.length<30) return {...item, zone:{supports:[],resistances:[]}};
-    const k5=parseK(res.data);
-    const zone=find5mPullbackZone(k5, item.direction);
-    return {...item, zone};
-  }));
-  const withZone=await batchFetch(tasks1,8);
-
-  state.trendResults=withZone;
-  state.scanDate=todayStr();
-  state.scanTime=Date.now();
   
-  localStorage.setItem('okx_trend_scan_v2',JSON.stringify({
-    date:state.scanDate, time:state.scanTime, results:state.trendResults
+  const dailyRaw = await batchFetch(tasks, 8);
+  state.dailyResults = dailyRaw.filter(Boolean);
+  
+  // 初始化 1H 和 15m 的状态为等待
+  state.dailyResults.forEach(r => {
+      state.entryMap[r.base] = { signal: 'WAIT', reason: '等待1H回调' };
+  });
+
+  state.scanDate = todayStr();
+  state.scanTime = Date.now();
+  localStorage.setItem('okx_daily_scan_v10', JSON.stringify({
+    date: state.scanDate, time: state.scanTime, results: state.dailyResults
   }));
 
   await scanEntry();
 
   $('progress').innerText='完成';
-  $('scanStatus').innerText=`已扫描 (${state.trendResults.length}个通过)`;
+  $('scanStatus').innerText=`已扫描 (${state.dailyResults.length}个符合日线)`;
   $('btnScan').style.display='none';
   $('btnRescan').style.display='block';
   $('btnRescan').disabled=false;
   $('btnScan').disabled=false;
-  isScanningTrend=false;
+  isScanningDaily=false;
 }
 
-// ============ 5m 扣扳机监控 ============
+// ============ 1H + 15m 扣扳机监控 ============
 async function scanEntry(){
-  if(isScanningEntry||state.trendResults.length===0) return;
+  if(isScanningEntry||state.dailyResults.length===0) return;
   isScanningEntry=true;
-  const list=state.trendResults;
+  const list=state.dailyResults;
   let done=0;
-  const tasks=list.map(item=>(async()=>{
-    const res=await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=5m&limit=50`);
+  
+  const tasks = list.map(item => (async()=>{
+    // 第一步：查 1H
+    const res1h = await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=1H&limit=30`);
     done++;
-    $('progress').innerText=`5m监控 ${done}/${list.length}`;
-    if(res.err||!res.data||res.data.length<10) return;
-    const k5=parseK(res.data);
-    const entry=check5mTrigger(k5, item.direction, item.zone||{supports:[],resistances:[]});
-    state.entryMap[item.base]=entry;
+    $('progress').innerText = `监控中 ${done}/${list.length}`;
+    
+    if(res1h.err || !res1h.data || res1h.data.length < 20) return;
+    const k1h = parseK(res1h.data);
+    const pullback = check1hPullback(k1h, item.direction);
+    
+    if (!pullback.ready) {
+        state.entryMap[item.base] = { signal: 'WAIT', reason: pullback.msg };
+        return;
+    }
+    
+    // 第二步：1H 满足了，查 15m
+    const res15m = await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=15m&limit=20`);
+    if(res15m.err || !res15m.data || res15m.data.length < 10) return;
+    const k15m = parseK(res15m.data);
+    const entry = check15mEntry(k15m, item.direction);
+    
+    // 保存最终状态
+    if (entry.signal === 'ENTRY') {
+        state.entryMap[item.base] = { signal: 'ENTRY', reason: entry.reason };
+    } else {
+        state.entryMap[item.base] = { signal: 'NEAR', reason: pullback.msg + '，' + entry.reason };
+    }
   }));
-  await batchFetch(tasks,8);
+  
+  await batchFetch(tasks, 8);
   isScanningEntry=false;
   render();
   
@@ -459,92 +394,52 @@ async function scanEntry(){
 }
 
 function render(){
-  if(state.trendResults.length===0){
-    $('ranking').innerHTML='<div class="empty">暂无符合条件的活跃币种。</div>';
+  if(state.dailyResults.length===0){
+    $('ranking').innerHTML='<div class="empty">今日暂无符合条件的币种（前50无明确EMA5/20日线趋势）。</div>';
     return;
   }
   let html='';
-  state.trendResults.forEach((r,idx)=>{
+  state.dailyResults.forEach((r,idx)=>{
     const dirTxt=r.direction==='LONG'?'多':'空';
     const dirCls=r.direction==='LONG'?'L':'S';
-    const rankCls=idx===0?'top1':idx===1?'top2':idx===2?'top3':'';
-    const rkCls=idx===0?'gold':idx===1?'silver':idx===2?'bronze':'';
-    const entry=state.entryMap[r.base]||{signal:'WAIT',reason:'分析中...'};
+    const entry=state.entryMap[r.base]||{signal:'WAIT',reason:'等待1H回调'};
     const eTag = {ENTRY:'<span class="tag entry">🎯 扣动扳机</span>',
-                  NEAR:'<span class="tag near">⏳ 到达回调区</span>',
-                  TREND:'<span class="tag trend">📈 趋势中·待回调</span>',
+                  NEAR:'<span class="tag near">⏳ 即将交叉</span>',
                   WAIT:'<span class="tag wait">⏸ 等待</span>'}[entry.signal]||'';
     const openCls = entry.signal==='ENTRY'?'open':'';
     html+=`
-    <div class="rank-card ${rankCls}">
+    <div class="rank-card">
       <div class="rank-header" onclick="toggleCard('${r.base}')">
         <div>
           <div class="rh-left">
-            <span class="rk ${rkCls}">#${idx+1}</span>
             <span class="coin">${r.base}</span>
             <span class="dir ${dirCls}">${dirTxt}</span>
-            <span class="score-badge">${r.score}分</span>
             ${eTag}
           </div>
-          <div class="rh-mid">站稳${r.streak}根 · 阳/阴:${r.upCount}/${r.downCount} · 实体占比${(r.avgBodyRatio*100).toFixed(0)}%</div>
+          <div class="rh-mid">日线收盘: ${px(r.curClose)}</div>
         </div>
         <span class="arrow" id="arrow-${r.base}">▼</span>
       </div>
       <div class="rank-body ${openCls}" id="body-${r.base}">
         <div class="sec">
-          <div class="sec-title">📊 1H 定趋势</div>
+          <div class="sec-title">📊 日线大方向 (EMA5 vs EMA20)</div>
           <div class="sec-body">
-            <div class="row"><span>方向</span><b class="${dirCls}">${r.direction==='LONG'?'多头平稳排列（阳线占多）':'空头平稳排列（阴线占多）'}</b></div>
-            <div class="row"><span>连续站稳</span><b>${r.streak} 根 (影线未刺穿EMA5)</b></div>
-            <div class="row"><span>最近10根阴阳比例</span><b class="${dirCls}">${r.upCount}阳 / ${r.downCount}阴</b></div>
-            <div class="row"><span>影线质量</span><b>${(r.avgBodyRatio*100).toFixed(1)}% 实体占比</b></div>
-            <div class="row"><span>最新收盘</span><b>${px(r.curClose)}</b></div>
+            <div class="row"><span>趋势方向</span><b class="${dirCls}">${r.direction==='LONG'?'多头':'空头'}</b></div>
+            <div class="row"><span>日线 EMA5</span><b>${px(r.ema5)}</b></div>
+            <div class="row"><span>日线 EMA20</span><b>${px(r.ema20)}</b></div>
           </div>
         </div>
         <div class="sec">
-          <div class="sec-title">📈 5m 反向回调寻找入场点</div>
+          <div class="sec-title">⏱️ 入场监控</div>
           <div class="sec-body">
-            ${r.direction==='LONG' ? `
-              <div class="row"><span>5m 回调支撑区</span><b class="L">${r.zone.supports.length?r.zone.supports.map(px).join(' / '):'——'}</b></div>
-              <div class="row"><span>距最近支撑</span><b>${r.zone.supports.length?((r.curClose-r.zone.supports[0])/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
-            ` : `
-              <div class="row"><span>5m 反弹压力区</span><b class="S">${r.zone.resistances.length?r.zone.resistances.map(px).join(' / '):'——'}</b></div>
-              <div class="row"><span>距最近压力</span><b>${r.zone.resistances.length?((r.zone.resistances[0]-r.curClose)/r.curClose*100).toFixed(2)+'%':'——'}</b></div>
-            `}
-          </div>
-        </div>
-        <div class="sec">
-          <div class="sec-title">⏱️ 5m 回调扣扳机</div>
-          <div class="sec-body">
-            <div class="row"><span>状态</span><b>${eTag}</b></div>
-            <div class="row"><span>信号</span><b style="text-align:right;max-width:65%">${entry.reason||'——'}</b></div>
-            ${buildEntryPlan(r,entry)}
+            <div class="row"><span>当前状态</span><b>${eTag}</b></div>
+            <div class="row"><span>详细说明</span><b style="text-align:right;max-width:65%">${entry.reason}</b></div>
           </div>
         </div>
       </div>
     </div>`;
   });
   $('ranking').innerHTML=html;
-}
-
-function buildEntryPlan(r,entry){
-  if(entry.signal!=='ENTRY'&&entry.signal!=='NEAR') return '';
-  let plan='';
-  const cur=r.curClose;
-  if(r.direction==='LONG'){
-    const s=entry.support||r.zone.supports[0]||cur*0.995;
-    plan=`
-      <div class="row"><span>建议入场</span><b class="L">${px(cur)} (市价/挂单)</b></div>
-      <div class="row"><span>防守止损</span><b class="Y">${px(s*0.99)} (跌破5m支撑)</b></div>
-      <div class="row"><span>短线止盈</span><b class="B">${px(cur*1.005)} ~ ${px(cur*1.008)}</b></div>`;
-  } else {
-    const resP=entry.resistance||r.zone.resistances[0]||cur*1.005;
-    plan=`
-      <div class="row"><span>建议入场</span><b class="S">${px(cur)} (市价/挂单)</b></div>
-      <div class="row"><span>防守止损</span><b class="Y">${px(resP*1.01)} (突破5m压力)</b></div>
-      <div class="row"><span>短线止盈</span><b class="B">${px(cur*0.995)} ~ ${px(cur*0.992)}</b></div>`;
-  }
-  return plan;
 }
 
 window.toggleCard=function(base){
@@ -560,26 +455,26 @@ window.toggleCard=function(base){
 
 function restoreCache(){
   try{
-    const raw=localStorage.getItem('okx_trend_scan_v2');
+    const raw=localStorage.getItem('okx_daily_scan_v10');
     if(!raw) return false;
     const cached=JSON.parse(raw);
     if(cached.date!==todayStr()) return false;
-    state.trendResults=cached.results||[];
+    state.dailyResults=cached.results||[];
     state.scanDate=cached.date;
     state.scanTime=cached.time;
-    return state.trendResults.length>0;
+    return state.dailyResults.length>0;
   }catch(e){return false;}
 }
 
 function startTimer(){
   if(timerOn) return;
-  if(state.trendResults.length===0){
-    alert('请先扫描 1H 趋势。');
+  if(state.dailyResults.length===0){
+    alert('请先扫描日线大方向。');
     return;
   }
   requestNotificationPermission();
   timerOn=true;
-  $('btnTimer').innerText='🛑 停止 5m 巡航';
+  $('btnTimer').innerText='🛑 停止 15m 巡航';
   $('btnTimer').classList.replace('b3','b2');
   scheduleNext();
   scanEntry();
@@ -589,13 +484,13 @@ function stopTimer(){
   if(timerHandle) clearTimeout(timerHandle);
   if(countdownHandle) clearInterval(countdownHandle);
   timerHandle=null; countdownHandle=null;
-  $('btnTimer').innerText='⏱️ 开启 5m 扣扳机巡航';
+  $('btnTimer').innerText='⏱️ 开启 15m 扣扳机巡航';
   $('btnTimer').classList.replace('b2','b3');
   $('countdown').innerText='--:--';
 }
 function scheduleNext(){
   const now=Date.now();
-  const step=5*60*1000; // 5分钟周期
+  const step=15*60*1000; // 15分钟周期
   const next=Math.ceil(now/step)*step+2000;
   if(timerHandle) clearTimeout(timerHandle);
   timerHandle=setTimeout(async()=>{
@@ -615,13 +510,13 @@ $('btnScan').onclick=()=>{
   if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   if(audioCtx.state==='suspended') audioCtx.resume();
   requestNotificationPermission();
-  scanTrend();
+  scanDaily();
 };
 $('btnRescan').onclick=()=>{
   if(!confirm('强制重扫会覆盖今日缓存，确定？')) return;
   if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
   if(audioCtx.state==='suspended') audioCtx.resume();
-  scanTrend(true);
+  scanDaily(true);
 };
 $('btnTimer').onclick=()=>{
   if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
@@ -631,7 +526,7 @@ $('btnTimer').onclick=()=>{
 
 (function init(){
   if(restoreCache()){
-    $('scanStatus').innerText=`今日已扫描 (${state.trendResults.length}个通过)`;
+    $('scanStatus').innerText=`今日已扫描 (${state.dailyResults.length}个符合日线)`;
     $('btnScan').style.display='none';
     $('btnRescan').style.display='block';
     $('progress').innerText='读取今日缓存';
