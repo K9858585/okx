@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>OKX 前20活跃币 深度AI优选</title>
+<title>OKX 前50成交额+30专属 深度AI优选</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:600px;margin:0 auto}
@@ -50,7 +50,7 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
 </head>
 <body>
 
-<h2>🤖 OKX 前20活跃币 深度优选</h2>
+<h2>🤖 前50成交额+30专属 深度优选</h2>
 
 <button class="btn" id="btnRun" onclick="startScan()">🔍 一键扫描：推荐当前最佳入场</button>
 
@@ -60,7 +60,7 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
   <div class="coin-head">
     <div>
       <div class="coin-name" id="resCoin">ETH</div>
-      <div style="font-size:12px;color:#8b949e;margin-top:4px;">欧易永续 · 24H活跃前20</div>
+      <div style="font-size:12px;color:#8b949e;margin-top:4px;">欧易永续 · 深度分析池</div>
     </div>
     <div style="text-align:right;">
       <div class="coin-dir" id="resDir">做多</div>
@@ -109,6 +109,13 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
 const $=i=>document.getElementById(i);
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(5);
 
+// 你之前给的 30 个专属保底币种（这里挑选了之前你指定的部分重点）
+const CUSTOM_COINS = [
+  "BTC", "ETH", "SOL", "DOGE", "XRP", "PEPE", "BCH", "LTC", "TRX", "ADA", 
+  "AVAX", "LINK", "DOT", "SUI", "APT", "NEAR", "FIL", "OP", "ARB", "UNI",
+  "INJ", "AAVE", "CRV", "WLD", "ONDO", "JUP", "SHIB", "ZRO", "TAO", "BNB"
+];
+
 // ============ 核心数据获取 ============
 async function fetchOKX(path){
   const ctrl=new AbortController();
@@ -133,7 +140,7 @@ function parseK(d){
   return{o,h,l,c};
 }
 
-async function batchFetch(tasks, concurrency=5){
+async function batchFetch(tasks, concurrency=8){
   const results=new Array(tasks.length).fill(null);
   let idx=0;
   async function worker(){
@@ -181,7 +188,6 @@ function calcRSI(closes, period=14){
 }
 
 // ============ 深度分析引擎 ============
-// 返回 null 或 { base, direction, entry, sl, tp, score, reasons }
 function analyzeCoin(k1h, k15m, base) {
     const n1 = k1h.c.length;
     const n15 = k15m.c.length;
@@ -203,21 +209,17 @@ function analyzeCoin(k1h, k15m, base) {
     let score = 0;
     let sl = 0, tp = 0;
 
-    // 1H 级别定大局
     const isBull1h = ema20_1h > ema50_1h;
     const isBear1h = ema20_1h < ema50_1h;
 
     // ---------- 做多逻辑 ----------
     if (isBull1h && curC > ema20_1h) {
-        // 基础分：顺应1H大趋势
         score += 40;
         reasons.push(`1H级别 EMA20(${px(ema20_1h)}) > EMA50(${px(ema50_1h)})，大方向明确处于多头趋势。`);
 
-        // 15m 寻找回调入场点
         const distToEma20 = Math.abs(curC - ema20_15) / curC;
         
         if (distToEma20 < 0.005 && curC > curO) {
-            // 回踩 15m EMA20 且收阳
             direction = 'LONG';
             score += 30;
             reasons.push(`15m级别价格成功回踩 EMA20(${px(ema20_15)}) 支撑，且最新K线收出阳线，表明回调结束。`);
@@ -230,15 +232,13 @@ function analyzeCoin(k1h, k15m, base) {
             sl = Math.min(...k15m.l.slice(-5)) * 0.998;
             if (sl >= curC) sl = curC * 0.99;
             const risk = curC - sl;
-            tp = curC + risk * 2; // 盈亏比 1:2
+            tp = curC + risk * 2;
 
             if (risk / curC < 0.008) {
                 score += 15;
                 reasons.push(`止损空间控制在 ${(risk/curC*100).toFixed(2)}% 以内，具有极高的盈亏比结构。`);
             }
-
         } else if (curC <= ema20_15 && rsi15 < 35 && curC > curO) {
-            // 跌破 15m EMA20 但在更下方超卖反转
             direction = 'LONG';
             score += 20;
             reasons.push(`15m级别出现超跌，RSI跌至 ${rsi15.toFixed(1)}，且K线收阳，存在均值回归做多机会。`);
@@ -255,7 +255,6 @@ function analyzeCoin(k1h, k15m, base) {
         const distToEma20 = Math.abs(curC - ema20_15) / curC;
         
         if (distToEma20 < 0.005 && curC < curO) {
-            // 反抽 15m EMA20 且收阴
             direction = 'SHORT';
             score += 30;
             reasons.push(`15m级别价格反抽 EMA20(${px(ema20_15)}) 受阻，且最新K线收出阴线，表明反弹结束。`);
@@ -294,12 +293,12 @@ function analyzeCoin(k1h, k15m, base) {
 async function startScan() {
     const btn = $('btnRun');
     btn.disabled = true;
-    btn.innerHTML = '<span class="sp"></span>获取前20活跃币...';
+    btn.innerHTML = '<span class="sp"></span>获取成交额前50名...';
     $('resultCard').style.display = 'none';
     $('othersBox').style.display = 'none';
 
     try {
-        // 1. 获取前20活跃币
+        // 1. 获取行情，并按真实 USDT 成交额排序，取前 50
         const tickerRes = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
         if (tickerRes.err) throw new Error("获取行情失败");
 
@@ -309,34 +308,43 @@ async function startScan() {
             const volB = parseFloat(b.volCcy24h || 0) * parseFloat(b.last || 0);
             return volB - volA;
         });
-        const top20 = usdtList.slice(0, 20);
+        
+        // 取前 50 名
+        const top50 = usdtList.slice(0, 50).map(t => t.instId.split('-')[0]);
 
-        // 2. 并发拉取 K 线数据
+        // 2. 将前 50 名与你的专属 30 币种合并去重
+        const scanSet = new Set([...top50, ...CUSTOM_COINS]);
+        const scanList = Array.from(scanSet);
+
+        btn.innerHTML = `<span class="sp"></span>深度分析 ${scanList.length} 个币种...`;
+
+        // 3. 并发拉取 K 线数据
         let done = 0;
-        const tasks = top20.map(item => (async()=>{
+        const tasks = scanList.map(base => (async()=>{
+            const instId = `${base}-USDT-SWAP`;
             const [res1h, res15m] = await Promise.all([
-                fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=1H&limit=60`),
-                fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=15m&limit=40`)
+                fetchOKX(`/api/v5/market/candles?instId=${instId}&bar=1H&limit=60`),
+                fetchOKX(`/api/v5/market/candles?instId=${instId}&bar=15m&limit=40`)
             ]);
             done++;
-            btn.innerHTML = `<span class="sp"></span>深度分析中 ${done}/20...`;
+            btn.innerHTML = `<span class="sp"></span>深度分析中 ${done}/${scanList.length}...`;
             
             if (res1h.err || res15m.err || !res1h.data || !res15m.data) return null;
             
             const k1h = parseK(res1h.data);
             const k15m = parseK(res15m.data);
-            return analyzeCoin(k1h, k15m, item.instId.split('-')[0]);
+            return analyzeCoin(k1h, k15m, base);
         }));
 
-        const rawResults = await batchFetch(tasks, 5);
+        const rawResults = await batchFetch(tasks, 8); // 并发限制 8 防限流
         const validResults = rawResults.filter(r => r !== null);
 
-        // 3. 排序取最优
+        // 4. 排序取最优
         validResults.sort((a,b) => b.score - a.score);
         renderResult(validResults);
 
     } catch (e) {
-        alert("网络错误，请重试。");
+        alert("网络错误或代理拦截，请刷新重试。");
     } finally {
         btn.disabled = false;
         btn.innerHTML = '🔍 重新扫描：推荐当前最佳入场';
@@ -346,7 +354,7 @@ async function startScan() {
 // ============ 渲染结果 ============
 function renderResult(results) {
     if (results.length === 0) {
-        alert('当前前20币种中，未出现符合“严密盈亏比结构”的绝佳点位，建议继续观望。');
+        alert('当前池中未出现符合“严密盈亏比结构”的绝佳点位，建议空仓观望。');
         return;
     }
 
