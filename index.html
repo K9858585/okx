@@ -3,153 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>欧易 前100活跃币 · 日线定向 · 1H深幅回调 · 15m扣扳机</title>
+<title>ETH 1m 极简做T辅助</title>
 <style>
 *{box-sizing:border-box}
-body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:720px;margin:0 auto}
-h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
-.win{background:#11161d;border:1px solid #30363d;border-radius:14px;padding:14px;margin-bottom:14px}
-.btn{display:block;width:100%;padding:13px;margin:7px 0;border-radius:10px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s}
-.btn:active{opacity:.7}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.b1{background:#ff9f0a;color:#000;box-shadow:0 4px 15px rgba(255,159,10,0.3)}
-.b2{background:#da3633;color:#fff}
-.b3{background:#238636;color:#fff}
-.b4{background:#30363d;color:#c9d1d9;border:1px solid #484f58}
-.st{margin:8px 0;padding:9px 12px;background:#161b22;border-radius:8px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
-.st .lbl{color:#8b949e}
-.st .val{color:#ff9f0a;font-weight:700}
-.timer{color:#79c0ff;font-family:monospace;font-weight:700}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:500px;margin:0 auto}
+h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex;justify-content:center;align-items:center;gap:8px}
+.win{background:#11161d;border:1px solid #30363d;border-radius:14px;padding:18px;margin-bottom:14px;text-align:center}
+.price-box{font-size:36px;font-weight:800;color:#fff;margin:10px 0;font-family:monospace;}
+.p-change{font-size:14px;font-weight:600;margin-bottom:15px;}
+.status-bar{display:flex;justify-content:space-between;font-size:12px;color:#8b949e;margin-bottom:15px;padding-bottom:10px;border-bottom:1px dashed #30363d;}
+.signal-box{padding:20px 15px;border-radius:12px;margin-bottom:15px;transition:all 0.3s;background:#161b22;border:1px solid #30363d;}
+.signal-box.LONG{background:rgba(63,185,80,0.1);border-color:#3fb950;box-shadow:0 0 15px rgba(63,185,80,0.15);}
+.signal-box.SHORT{background:rgba(248,81,73,0.1);border-color:#f85149;box-shadow:0 0 15px rgba(248,81,73,0.15);}
+.sig-title{font-size:22px;font-weight:800;margin-bottom:6px;}
+.sig-title.LONG{color:#3fb950}.sig-title.SHORT{color:#f85149}.sig-title.WAIT{color:#8b949e}
+.sig-desc{font-size:13px;color:#c9d1d9;line-height:1.5;}
+.trade-plan{display:none;grid-template-columns:1fr;gap:10px;background:#0d1117;padding:15px;border-radius:10px;margin-top:15px;border:1px solid #30363d;text-align:left;}
+.trade-plan.show{display:grid;}
+.plan-row{display:flex;justify-content:space-between;align-items:center;font-size:15px;}
+.plan-row span{color:#8b949e;}
+.plan-row b{font-family:monospace;font-size:16px;}
+.indicator-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:15px;}
+.ind-card{background:#161b22;padding:10px;border-radius:8px;font-size:12px;text-align:center;border:1px solid #30363d;}
+.ind-card .val{font-size:14px;font-weight:700;margin-top:4px;color:#fff;}
 .sp{display:inline-block;width:13px;height:13px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes r{to{transform:rotate(360deg)}}
-.empty{color:#8b949e;font-size:13px;padding:22px;text-align:center;border:1px dashed #30363d;border-radius:10px}
-.rank-card{background:#161b22;border:1px solid #30363d;border-radius:12px;margin-bottom:10px;overflow:hidden;transition:border-color .2s}
-.rank-card.entry-card{border-color:#3fb950;box-shadow:0 0 10px rgba(63,185,80,.1)}
-.rank-header{padding:12px 14px;cursor:pointer;user-select:none;display:flex;justify-content:space-between;align-items:center;transition:background .15s}
-.rank-header:hover{background:#1c2330}
-.rh-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.coin{font-size:16px;font-weight:700;color:#fff}
-.dir{font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;border:1px solid}
-.dir.L{color:#3fb950;border-color:#3fb950;background:#0f2417}
-.dir.S{color:#f85149;border-color:#f85149;background:#2a1414}
-.score-badge{font-size:13px;font-weight:800;padding:3px 10px;border-radius:10px;background:#21262d;color:#ff9f0a;border:1px solid #ff9f0a}
-.rh-mid{font-size:12px;color:#8b949e;margin-top:4px}
-.arrow{color:#8b949e;font-size:14px;transition:transform .2s}
-.rank-body{display:none;padding:0 14px 14px;border-top:1px solid #21262d}
-.rank-body.open{display:block}
-.sec{margin-top:12px}
-.sec-title{font-size:13px;font-weight:700;color:#ff9f0a;margin-bottom:6px;display:flex;align-items:center;gap:6px}
-.sec-body{font-size:13px;line-height:1.75;color:#c9d1d9;background:#0d1117;padding:10px 12px;border-radius:8px}
-.sec-body .row{display:flex;justify-content:space-between;padding:3px 0}
-.sec-body .row span:first-child{color:#8b949e}
-.sec-body .row b{color:#fff}
-.L{color:#3fb950}.S{color:#f85149}.Y{color:#ff9f0a}.B{color:#58a6ff}.N{color:#8b949e}
-.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:700}
-.tag.entry{background:#0f2417;color:#3fb950;border:1px solid #3fb950}
-.tag.near{background:#2a2210;color:#ff9f0a;border:1px solid #ff9f0a}
-.tag.wait{background:#21262d;color:#8b949e;border:1px solid #484f58}
-.warn-bar{background:rgba(218,54,51,0.1);border:1px solid #da3633;color:#f85149;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px;text-align:center;}
-.top-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 4px;}
-.top-actions span{font-size:14px;font-weight:700;color:#8b949e;}
-.btn-mini{background:#30363d;color:#c9d1d9;border:1px solid #484f58;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
-.btn-mini:active{opacity:0.7}
 </style>
 </head>
 <body>
 
+<h2>💎 ETH 1m 极简做T辅助</h2>
+
 <div class="win">
-  <h2><img src="https://www.okx.com/favicon.ico" width="20" height="20"> 日线定向 · 1H深幅回调 · 15m扣扳机</h2>
-  <div class="warn-bar">📢 提示：请保持页面前台运行，允许“发送通知”以免漏掉入场警报。</div>
+  <div class="status-bar">
+    <span id="updateTime">等待首次数据...</span>
+    <span id="nextTimer">倒计时: --s</span>
+  </div>
   
-  <button class="btn b1" id="btnScan">🔍 扫描前100活跃币（定大方向）</button>
-  <button class="btn b3" id="btnTimer">⏱️ 开启 15m 扣扳机巡航</button>
-  <button class="btn b4" id="btnRescan" style="display:none">🔄 强制重扫日线</button>
-  <div class="st"><span class="lbl">日线扫描状态</span><span class="val" id="scanStatus">未扫描</span></div>
-  <div class="st"><span class="lbl">下次 15m 扫描</span><span class="timer" id="countdown">--:--</span></div>
-  <div class="st"><span class="lbl">状态 / 警报</span><span class="val" id="progress">-</span></div>
-</div>
+  <div class="price-box" id="ethPrice">---</div>
+  <div class="p-change" id="priceChange">---</div>
 
-<div class="top-actions" id="listHeader" style="display:none;">
-  <span>📊 监控列表 (按得分排名)</span>
-  <button class="btn-mini" onclick="collapseAll()">⬆️ 一键收起</button>
-</div>
+  <div class="signal-box" id="signalBox">
+    <div class="sig-title WAIT" id="sigTitle"><span class="sp"></span>计算中...</div>
+    <div class="sig-desc" id="sigDesc">正在获取ETH 1分钟K线数据</div>
+    
+    <div class="trade-plan" id="tradePlan">
+      <div class="plan-row"><span>建议方向</span><b id="planDir">--</b></div>
+      <div class="plan-row"><span>入场价格</span><b id="planEntry" style="color:#58a6ff;">--</b></div>
+      <div class="plan-row"><span>止损点位 (防守)</span><b id="planSL" style="color:#f85149;">--</b></div>
+      <div class="plan-row"><span>止盈点位 (目标)</span><b id="planTP" style="color:#3fb950;">--</b></div>
+    </div>
+  </div>
 
-<div id="ranking"><div class="empty">尚未扫描，点击上方按钮获取当前成交额前100的币种，并定日线大方向。</div></div>
+  <div class="indicator-grid">
+    <div class="ind-card">RSI(14)<div class="val" id="valRsi">--</div></div>
+    <div class="ind-card">EMA(7)<div class="val" id="valEma7">--</div></div>
+    <div class="ind-card">EMA(21)<div class="val" id="valEma21">--</div></div>
+  </div>
+</div>
 
 <script>
 const $=i=>document.getElementById(i);
-const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(6);
+const px=p=>p>=1000?p.toFixed(2):p>=1?p.toFixed(3):p.toFixed(5);
+
 let audioCtx=null;
-let timerOn=false;
-let timerHandle=null, countdownHandle=null;
-let isScanningDaily=false, isScanningEntry=false;
-let originalTitle = document.title;
+let countdown = 60;
+let timerInterval = null;
+let lastSignalType = 'WAIT';
 
-const state = {
-  dailyResults: [],
-  entryMap: {},
-  scanDate: '',
-  scanTime: 0
-};
-
-function todayStr(){
-  const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-// ============ 5秒长响警报 ============
-function playAlert() {
-  if (audioCtx) {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    osc.type = 'square'; 
-    const t = audioCtx.currentTime;
-    for (let i = 0; i < 10; i++) {
-        osc.frequency.setValueAtTime(i % 2 === 0 ? 1000 : 800, t + i * 0.5);
-    }
-    gain.gain.setValueAtTime(1, t);
-    gain.gain.setValueAtTime(1, t + 4.5);
-    gain.gain.exponentialRampToValueAtTime(0.01, t + 5.0);
-    osc.start(t);
-    osc.stop(t + 5.0);
+// ============ 提示音 ============
+function playAlert(type){
+  if(!audioCtx) return;
+  if(audioCtx.state==='suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  
+  if (type === 'LONG') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1);
+  } else if (type === 'SHORT') {
+      osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(500, audioCtx.currentTime + 0.1);
   }
-
-  if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("🚨 15m扣扳机警报", {
-      body: "1H回调即将交叉，15m出现入场信号，请立即查看！",
-      tag: "entry-alert",
-      renotify: true
-    });
-  }
-
-  let isOriginal = true;
-  let flashCount = 0;
-  const flashInterval = setInterval(() => {
-    document.title = isOriginal ? "🚨 扣扳机警报！" : originalTitle;
-    isOriginal = !isOriginal;
-    flashCount++;
-    if (flashCount > 20) {
-      clearInterval(flashInterval);
-      document.title = originalTitle;
-    }
-  }, 500);
+  
+  gain.gain.setValueAtTime(1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+  osc.start(); osc.stop(audioCtx.currentTime + 0.3);
 }
 
-async function requestNotificationPermission() {
-    if ("Notification" in window) {
-        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-            try { await Notification.requestPermission(); } catch(e) {}
-        }
-    }
-}
-
+// ============ API请求 ============
 async function fetchOKX(path){
   const ctrl=new AbortController();
-  const t=setTimeout(()=>ctrl.abort(),7000);
+  const t=setTimeout(()=>ctrl.abort(),5000);
   try{
     const res=await fetch('https://www.okx.com'+path,{signal:ctrl.signal});
     clearTimeout(t);
@@ -159,17 +105,19 @@ async function fetchOKX(path){
     return {data:j.data};
   }catch(e){clearTimeout(t);return {err:'网络超时'};}
 }
+
 function parseK(d){
-  const o=[],h=[],l=[],c=[],v=[];
+  const o=[],h=[],l=[],c=[];
   const closed=d.filter(x=>x[8]==='1');
-  const data=[...closed].reverse();
+  const data=[...closed].reverse(); // 按时间正序
   for(const x of data){
-    o.push(parseFloat(x[1]));h.push(parseFloat(x[2]));
-    l.push(parseFloat(x[3]));c.push(parseFloat(x[4]));
-    v.push(parseFloat(x[5]));
+    o.push(parseFloat(x[1])); h.push(parseFloat(x[2]));
+    l.push(parseFloat(x[3])); c.push(parseFloat(x[4]));
   }
-  return{o,h,l,c,v};
+  return {o,h,l,c};
 }
+
+// ============ 指标计算 ============
 function calcEMA(closes,period){
   if(closes.length<period) return [];
   const k=2/(period+1);
@@ -180,442 +128,211 @@ function calcEMA(closes,period){
   for(let i=period;i<closes.length;i++) ema.push(closes[i]*k+ema[ema.length-1]*(1-k));
   return new Array(period-1).fill(NaN).concat(ema);
 }
-async function batchFetch(tasks, concurrency=8){
-  const results=new Array(tasks.length).fill(null);
-  let idx=0;
-  async function worker(){
-    while(idx<tasks.length){
-      const i=idx++;
-      try{ results[i]=await tasks[i](); }catch(e){ results[i]=null; }
-    }
+
+function calcRSI(closes, period=14){
+  if(closes.length <= period) return [];
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i-1];
+    if (diff >= 0) gains += diff; else losses -= diff;
   }
-  await Promise.all(Array(Math.min(concurrency,tasks.length)).fill().map(worker));
-  return results;
-}
-
-// ============ 获取前100活跃币 ============
-async function getTop100Coins() {
-    const res = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
-    if (res.err || !res.data || res.data.length === 0) return [];
-    
-    const usdtList = res.data.filter(t => t.instId.endsWith('USDT-SWAP'));
-    usdtList.sort((a,b) => {
-        const volA = parseFloat(a.volCcy24h || 0) * parseFloat(a.last || 0);
-        const volB = parseFloat(b.volCcy24h || 0) * parseFloat(b.last || 0);
-        return volB - volA;
-    });
-    return usdtList.slice(0, 100).map(t => t.instId); // 取前100
-}
-
-// ============ 日线定大方向 ============
-function analyzeDaily(kd){
-  const {c}=kd;
-  const n=c.length;
-  if(n<25) return null;
-
-  const ema5=calcEMA(c,5);
-  const ema20=calcEMA(c,20);
-  if(isNaN(ema20[n-1])||isNaN(ema5[n-1])) return null;
-
-  const lastE5=ema5[n-1], lastE20=ema20[n-1], lastC=c[n-1];
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  const rsi = [];
   
-  if(lastE5>lastE20 && lastC>lastE20) return { direction: 'LONG', ema5: lastE5, ema20: lastE20, curClose: lastC };
-  if(lastE5<lastE20 && lastC<lastE20) return { direction: 'SHORT', ema5: lastE5, ema20: lastE20, curClose: lastC };
-  return null;
-}
-
-// ============ 1H 看深幅回调：必须拉开过距离，且拐头靠近 ============
-function check1hPullback(k1h, direction) {
-    const {c} = k1h;
-    const n = c.length;
-    if(n < 30) return { ready: false, msg: "1H数据不足" };
-    
-    const ema5 = calcEMA(c, 5);
-    const ema20 = calcEMA(c, 20);
-    
-    const curE5 = ema5[n-1], prevE5 = ema5[n-2], prevE5_2 = ema5[n-3];
-    const curE20 = ema20[n-1];
-    
-    // 1. 检查过去 20 根 1H K 线内，两线是否拉开过足够的距离（拒绝缠绕）
-    let maxDeviation = 0;
-    for (let i = n - 20; i < n; i++) {
-        if (isNaN(ema5[i]) || isNaN(ema20[i])) continue;
-        const diff = Math.abs(ema5[i] - ema20[i]) / ema20[i];
-        if (diff > maxDeviation) maxDeviation = diff;
-    }
-    
-    // 如果最大偏离幅度不到 0.8%，说明近期一直在横盘缠绕，直接过滤
-    if (maxDeviation < 0.008) {
-        return { ready: false, msg: "近期两线距离太近（缠绕震荡），无充分回调/反弹" };
-    }
-    
-    if (direction === 'LONG') {
-        // 多头：EMA5 必须有拐头向上的动作（当前大于前一根，且前一根大于前前一根）
-        const isTurnUp = curE5 > prevE5 && prevE5 >= prevE5_2;
-        
-        // 当前距离：即将金叉（距离在 0.3% 以内，且未大幅度穿过）
-        const gap = (curE20 - curE5) / curE20; 
-        const isNearCross = gap > -0.001 && gap < 0.003;
-        
-        if (isTurnUp && isNearCross) {
-            return { ready: true, msg: `深度回调(幅度${(maxDeviation*100).toFixed(2)}%)后拐头向上，即将金叉`, gap: gap, maxDeviation };
-        }
-    } else {
-        // 空头：EMA5 必须有拐头向下的动作
-        const isTurnDown = curE5 < prevE5 && prevE5 <= prevE5_2;
-        
-        const gap = (curE5 - curE20) / curE20;
-        const isNearCross = gap > -0.001 && gap < 0.003;
-        
-        if (isTurnDown && isNearCross) {
-            return { ready: true, msg: `充分反弹(幅度${(maxDeviation*100).toFixed(2)}%)后拐头向下，即将死叉`, gap: gap, maxDeviation };
-        }
-    }
-    return { ready: false, msg: "等待1H充分回调并拐头" };
-}
-
-// ============ 15m 回调入场扣扳机 ============
-function check15mEntry(k15m, direction) {
-    const {o, c} = k15m;
-    const n = c.length;
-    if(n < 10) return { signal:'WAIT', reason:'15m数据不足' };
-    
-    const ema5 = calcEMA(c, 5);
-    const curC = c[n-1], prevC = c[n-2];
-    const curO = o[n-1];
-    const curE5 = ema5[n-1];
-
-    let isTrigger = false;
-    let reason = '';
-    
-    if (direction === 'LONG') {
-        if (curC > curO && curC > prevC && curC > curE5) {
-            isTrigger = true;
-            reason = '15m收出止跌阳线，且站上EMA5';
-        }
-    } else {
-        if (curC < curO && curC < prevC && curC < curE5) {
-            isTrigger = true;
-            reason = '15m收出滞涨阴线，且跌破EMA5';
-        }
-    }
-    
-    if (isTrigger) {
-        const bodySize = Math.abs(curC - curO) / curC * 100; 
-        return { signal: 'ENTRY', reason, bodySize };
-    }
-    
-    return { signal: 'WAIT', reason: '1H已就绪，等待15m反转K线' };
-}
-
-// ============ 日线扫描主流程 ============
-async function scanDaily(force=false){
-  if(isScanningDaily) return;
-  isScanningDaily=true;
-  $('btnScan').disabled=true;
-  $('btnRescan').disabled=true;
-  $('progress').innerHTML='<span class="sp"></span>获取前100活跃币...';
-  $('scanStatus').innerText='扫描中';
-
-  const top100 = await getTop100Coins();
-  if (top100.length === 0) {
-      $('progress').innerText = '获取失败，请重试';
-      isScanningDaily = false;
-      $('btnScan').disabled=false;
-      return;
+  rsi[period] = 100 - (100 / (1 + avgGain / (avgLoss || 1)));
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i-1];
+    let gain = diff >= 0 ? diff : 0;
+    let loss = diff < 0 ? -diff : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    rsi[i] = 100 - (100 / (1 + avgGain / (avgLoss || 1)));
   }
-
-  $('progress').innerHTML='<span class="sp"></span>日线定向中...';
-  let done=0;
-  const tasks = top100.map(inst => (async()=>{
-    const res = await fetchOKX(`/api/v5/market/candles?instId=${inst}&bar=1D&limit=30`);
-    done++;
-    $('progress').innerText = `日线定向 ${done}/${top100.length}`;
-    if(res.err || !res.data || res.data.length < 25) return null;
-    
-    const kd = parseK(res.data);
-    const a = analyzeDaily(kd);
-    if(!a) return null;
-    return { base: inst.split('-')[0], instId: inst, ...a };
-  }));
-  
-  const dailyRaw = await batchFetch(tasks, 10);
-  state.dailyResults = dailyRaw.filter(Boolean);
-  
-  state.dailyResults.forEach(r => {
-      state.entryMap[r.base] = { signal: 'WAIT', reason: '等待1H深幅回调', score: 0 };
-  });
-
-  state.scanDate = todayStr();
-  state.scanTime = Date.now();
-  localStorage.setItem('okx_daily_scan_v12', JSON.stringify({
-    date: state.scanDate, time: state.scanTime, results: state.dailyResults
-  }));
-
-  await scanEntry();
-
-  $('progress').innerText='完成';
-  $('scanStatus').innerText=`已扫描 (${state.dailyResults.length}个符合日线)`;
-  $('btnScan').style.display='none';
-  $('btnRescan').style.display='block';
-  $('btnRescan').disabled=false;
-  $('btnScan').disabled=false;
-  isScanningDaily=false;
+  return new Array(period).fill(NaN).concat(rsi.slice(period));
 }
 
-// ============ 1H + 15m 扣扳机监控与打分 ============
-async function scanEntry(){
-  if(isScanningEntry||state.dailyResults.length===0) return;
-  isScanningEntry=true;
-  const list=state.dailyResults;
-  let done=0;
-  
-  let tempResults = [];
+function calcBoll(closes, period=20, mult=2) {
+    if (closes.length < period) return {upper:[], mid:[], lower:[]};
+    const upper = [], mid = [], lower = [];
+    for (let i = 0; i < closes.length; i++) {
+        if (i < period - 1) { upper.push(NaN); mid.push(NaN); lower.push(NaN); continue; }
+        const slice = closes.slice(i - period + 1, i + 1);
+        const mean = slice.reduce((a,b)=>a+b, 0) / period;
+        const variance = slice.reduce((a,b)=>a + Math.pow(b - mean, 2), 0) / period;
+        const std = Math.sqrt(variance);
+        mid.push(mean);
+        upper.push(mean + mult * std);
+        lower.push(mean - mult * std);
+    }
+    return {upper, mid, lower};
+}
 
-  const tasks = list.map(item => (async()=>{
-    const res1h = await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=1H&limit=30`);
-    done++;
-    $('progress').innerText = `监控中 ${done}/${list.length}`;
-    
-    if(res1h.err || !res1h.data || res1h.data.length < 20) return;
-    const k1h = parseK(res1h.data);
-    const pullback = check1hPullback(k1h, item.direction);
-    
-    if (!pullback.ready) {
-        tempResults.push({ base: item.base, data: { signal: 'WAIT', reason: pullback.msg, score: 0 } });
+// ============ 核心分析逻辑 ============
+async function analyzeETH() {
+    const res = await fetchOKX('/api/v5/market/candles?instId=ETH-USDT-SWAP&bar=1m&limit=100');
+    if (res.err || !res.data || res.data.length < 30) {
+        $('updateTime').innerText = '数据获取失败，重试中';
         return;
     }
+
+    const k = parseK(res.data);
+    const n = k.c.length;
+    const curC = k.c[n-1];
+    const curO = k.o[n-1];
+    const curH = k.h[n-1];
+    const curL = k.l[n-1];
+    const prevC = k.c[n-2];
+
+    // 计算指标
+    const ema7 = calcEMA(k.c, 7);
+    const ema21 = calcEMA(k.c, 21);
+    const rsi = calcRSI(k.c, 14);
+    const boll = calcBoll(k.c, 20, 2);
+
+    const curEma7 = ema7[n-1], curEma21 = ema21[n-1];
+    const prevEma7 = ema7[n-2], prevEma21 = ema21[n-2];
+    const curRsi = rsi[n-1];
+    const curUpper = boll.upper[n-1];
+    const curLower = boll.lower[n-1];
+    const curMid = boll.mid[n-1];
+
+    // 更新UI价格
+    $('ethPrice').innerText = px(curC);
+    const change = (curC - prevC) / prevC * 100;
+    $('priceChange').innerText = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+    $('priceChange').style.color = change >= 0 ? '#3fb950' : '#f85149';
+
+    $('valRsi').innerText = curRsi.toFixed(1);
+    $('valRsi').style.color = curRsi > 70 ? '#f85149' : (curRsi < 30 ? '#3fb950' : '#fff');
+    $('valEma7').innerText = px(curEma7);
+    $('valEma21').innerText = px(curEma21);
     
-    // 1H 满足了，查 15m
-    const res15m = await fetchOKX(`/api/v5/market/candles?instId=${item.instId}&bar=15m&limit=20`);
-    if(res15m.err || !res15m.data || res15m.data.length < 10) return;
-    const k15m = parseK(res15m.data);
-    const entry = check15mEntry(k15m, item.direction);
-    
-    if (entry.signal === 'ENTRY') {
-        // ===== 打分系统 =====
-        // 1. 日线趋势强度（EMA5 与 EMA20 偏离度，最大30分）
-        const dailyGap = Math.abs(item.ema5 - item.ema20) / item.ema20 * 100;
-        const scoreDaily = Math.min(dailyGap * 15, 30); 
+    const now = new Date();
+    $('updateTime').innerText = `更新: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
-        // 2. 1H 回调深度（拉开的幅度越大，蓄力越强，最大40分）
-        const score1H = Math.min(pullback.maxDeviation * 100 * 20, 40);
+    // ===== 信号判断 =====
+    let signalType = 'WAIT';
+    let reason = '';
+    let sl = 0, tp = 0;
 
-        // 3. 15m 实体反转力度（最大30分）
-        const score15m = Math.min(entry.bodySize * 100, 30); 
-
-        const totalScore = Math.round(scoreDaily + score1H + score15m);
-        
-        tempResults.push({ 
-            base: item.base, 
-            data: { signal: 'ENTRY', reason: entry.reason, score: totalScore, detail: { scoreDaily, score1H, score15m } } 
-        });
-    } else {
-        tempResults.push({ base: item.base, data: { signal: 'NEAR', reason: pullback.msg + '，' + entry.reason, score: 0 } });
+    // 做多逻辑：RSI超卖(<=32) + 价格跌破/触及布林下轨 + 收阳线
+    if (curRsi <= 32 && curL <= curLower * 1.001 && curC > curO) {
+        signalType = 'LONG';
+        reason = '1m RSI极度超卖，价格触及布林下轨且收出阳线反转。';
+        // 止损：最近3根最低点下方一点
+        sl = Math.min(k.l[n-3], k.l[n-2], curL) * 0.9995;
+        if (sl >= curC) sl = curC * 0.997; // 保底止损0.3%
+        // 止盈：固定盈亏比1.5 (或布林中轨)
+        tp = curC + (curC - sl) * 1.5;
     }
-  }));
-  
-  await batchFetch(tasks, 8);
-  
-  tempResults.forEach(res => {
-      state.entryMap[res.base] = res.data;
-  });
-  
-  isScanningEntry=false;
-  render();
-  
-  let hasTrigger = false;
-  let triggeredCoins = [];
-  for (const base in state.entryMap) {
-      if (state.entryMap[base].signal === 'ENTRY') {
-          hasTrigger = true;
-          triggeredCoins.push(base);
-      }
-  }
-  if (hasTrigger) {
-      playAlert(); 
-      $('progress').innerHTML = `<span style="color:#3fb950;font-weight:bold;">🚨 扳机触发: ${triggeredCoins.join(', ')}</span>`;
-  } else {
-      $('progress').innerText = '监控完成，暂无入场';
-  }
+    // 做空逻辑：RSI超买(>=68) + 价格突破/触及布林上轨 + 收阴线
+    else if (curRsi >= 68 && curH >= curUpper * 0.999 && curC < curO) {
+        signalType = 'SHORT';
+        reason = '1m RSI极度超买，价格触及布林上轨且收出阴线滞涨。';
+        // 止损：最近3根最高点上方一点
+        sl = Math.max(k.h[n-3], k.h[n-2], curH) * 1.0005;
+        if (sl <= curC) sl = curC * 1.003;
+        // 止盈：固定盈亏比1.5
+        tp = curC - (sl - curC) * 1.5;
+    }
+    // 均线极速金叉（追单）
+    else if (!isNaN(prevEma7) && prevEma7 <= prevEma21 && curEma7 > curEma21 && curRsi < 60 && curRsi > 40) {
+        signalType = 'LONG';
+        reason = '1m EMA7 上穿 EMA21，动能金叉形成。';
+        sl = curEma21 * 0.998;
+        tp = curC + (curC - sl) * 1.5;
+    }
+    // 均线极速死叉（追单）
+    else if (!isNaN(prevEma7) && prevEma7 >= prevEma21 && curEma7 < curEma21 && curRsi < 60 && curRsi > 40) {
+        signalType = 'SHORT';
+        reason = '1m EMA7 下穿 EMA21，动能死叉形成。';
+        sl = curEma21 * 1.002;
+        tp = curC - (sl - curC) * 1.5;
+    }
+    // 观望
+    else {
+        if (curC > curUpper) reason = '价格在布林上轨外，严重超买，切勿追多，等待回落。';
+        else if (curC < curLower) reason = '价格在布林下轨外，严重超卖，切勿追空，等待企稳。';
+        else if (curEma7 > curEma21) reason = '短线多头趋势，等待回踩布林下轨或均线支撑做多。';
+        else reason = '短线空头趋势，等待反弹布林上轨或均线压力做空。';
+    }
+
+    // 渲染UI
+    renderSignal(signalType, reason, curC, sl, tp);
 }
 
-function render(){
-  if(state.dailyResults.length===0){
-    $('ranking').innerHTML='<div class="empty">今日暂无符合条件的币种（前100无明确EMA5/20日线趋势）。</div>';
-    $('listHeader').style.display = 'none';
-    return;
-  }
-  
-  state.dailyResults.sort((a, b) => {
-      const entryA = state.entryMap[a.base] || { signal: 'WAIT', score: 0 };
-      const entryB = state.entryMap[b.base] || { signal: 'WAIT', score: 0 };
-      
-      const weight = { 'ENTRY': 3, 'NEAR': 2, 'WAIT': 1 };
-      const wA = weight[entryA.signal];
-      const wB = weight[entryB.signal];
-      
-      if (wA !== wB) return wB - wA;
-      if (entryA.signal === 'ENTRY') return entryB.score - entryA.score;
-      return a.base.localeCompare(b.base);
-  });
+function renderSignal(type, reason, curC, sl, tp) {
+    const box = $('signalBox');
+    const title = $('sigTitle');
+    const desc = $('sigDesc');
+    const plan = $('tradePlan');
 
-  $('listHeader').style.display = 'flex';
-  let html='';
-  state.dailyResults.forEach((r,idx)=>{
-    const dirTxt=r.direction==='LONG'?'多':'空';
-    const dirCls=r.direction==='LONG'?'L':'S';
-    const entry=state.entryMap[r.base]||{signal:'WAIT',reason:'等待1H深幅回调',score:0};
-    const eTag = {ENTRY:'<span class="tag entry">🎯 扣动扳机</span>',
-                  NEAR:'<span class="tag near">⏳ 即将交叉</span>',
-                  WAIT:'<span class="tag wait">⏸ 等待</span>'}[entry.signal]||'';
-    const openCls = entry.signal==='ENTRY'?'open':'';
-    const cardCls = entry.signal==='ENTRY'?'entry-card':'';
-    const scoreHtml = entry.signal === 'ENTRY' ? `<span class="score-badge">${entry.score}分</span>` : '';
+    box.className = 'signal-box';
+    title.className = 'sig-title';
+
+    if (type === 'LONG') {
+        box.classList.add('LONG');
+        title.classList.add('LONG');
+        title.innerText = '🚀 做多 (Buy)';
+        plan.classList.add('show');
+        
+        $('planDir').innerText = '做多'; $('planDir').style.color = '#3fb950';
+        $('planEntry').innerText = px(curC);
+        $('planSL').innerText = px(sl);
+        $('planTP').innerText = px(tp);
+        
+        if (lastSignalType !== 'LONG' && lastSignalType !== 'WAIT') playAlert('LONG');
+    } 
+    else if (type === 'SHORT') {
+        box.classList.add('SHORT');
+        title.classList.add('SHORT');
+        title.innerText = '🌊 做空 (Sell)';
+        plan.classList.add('show');
+        
+        $('planDir').innerText = '做空'; $('planDir').style.color = '#f85149';
+        $('planEntry').innerText = px(curC);
+        $('planSL').innerText = px(sl);
+        $('planTP').innerText = px(tp);
+        
+        if (lastSignalType !== 'SHORT' && lastSignalType !== 'WAIT') playAlert('SHORT');
+    } 
+    else {
+        title.classList.add('WAIT');
+        title.innerText = '⏳ 观望 (Wait)';
+        plan.classList.remove('show');
+    }
     
-    html+=`
-    <div class="rank-card ${cardCls}">
-      <div class="rank-header" onclick="toggleCard('${r.base}')">
-        <div>
-          <div class="rh-left">
-            <span class="coin">${r.base}</span>
-            <span class="dir ${dirCls}">${dirTxt}</span>
-            ${eTag}
-            ${scoreHtml}
-          </div>
-          <div class="rh-mid">日线收盘: ${px(r.curClose)}</div>
-        </div>
-        <span class="arrow" id="arrow-${r.base}">${openCls?'▲':'▼'}</span>
-      </div>
-      <div class="rank-body ${openCls}" id="body-${r.base}">
-        <div class="sec">
-          <div class="sec-title">📊 日线大方向 (EMA5 vs EMA20)</div>
-          <div class="sec-body">
-            <div class="row"><span>趋势方向</span><b class="${dirCls}">${r.direction==='LONG'?'多头':'空头'}</b></div>
-            <div class="row"><span>日线 EMA5</span><b>${px(r.ema5)}</b></div>
-            <div class="row"><span>日线 EMA20</span><b>${px(r.ema20)}</b></div>
-          </div>
-        </div>
-        <div class="sec">
-          <div class="sec-title">⏱️ 入场监控</div>
-          <div class="sec-body">
-            <div class="row"><span>当前状态</span><b>${eTag}</b></div>
-            <div class="row"><span>详细说明</span><b style="text-align:right;max-width:65%">${entry.reason}</b></div>
-            ${entry.signal==='ENTRY' && entry.detail ? `
-            <div class="row" style="border-top:1px dashed #30363d; margin-top:6px; padding-top:6px;">
-                <span>得分构成</span>
-                <b class="Y">日线 ${entry.detail.scoreDaily.toFixed(0)} + 1H深度 ${entry.detail.score1H.toFixed(0)} + 15m ${entry.detail.score15m.toFixed(0)}</b>
-            </div>` : ''}
-          </div>
-        </div>
-      </div>
-    </div>`;
-  });
-  $('ranking').innerHTML=html;
+    desc.innerText = reason;
+    lastSignalType = type;
 }
 
-window.toggleCard=function(base){
-  const body=document.getElementById('body-'+base);
-  const arrow=document.getElementById('arrow-'+base);
-  if(!body) return;
-  if(body.classList.contains('open')){
-    body.classList.remove('open'); arrow.textContent='▼';
-  } else {
-    body.classList.add('open'); arrow.textContent='▲';
-  }
-};
+// ============ 定时器 ============
+function startTicker() {
+    // 立即执行一次
+    analyzeETH();
 
-window.collapseAll = function() {
-    const bodies = document.querySelectorAll('.rank-body');
-    const arrows = document.querySelectorAll('.arrow');
-    bodies.forEach(b => b.classList.remove('open'));
-    arrows.forEach(a => a.textContent = '▼');
-};
-
-function restoreCache(){
-  try{
-    const raw=localStorage.getItem('okx_daily_scan_v12');
-    if(!raw) return false;
-    const cached=JSON.parse(raw);
-    if(cached.date!==todayStr()) return false;
-    state.dailyResults=cached.results||[];
-    state.scanDate=cached.date;
-    state.scanTime=cached.time;
-    return state.dailyResults.length>0;
-  }catch(e){return false;}
+    // 倒计时
+    timerInterval = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+            countdown = 60;
+            analyzeETH();
+        }
+        $('nextTimer').innerText = `刷新倒计时: ${countdown}s`;
+    }, 1000);
 }
 
-function startTimer(){
-  if(timerOn) return;
-  if(state.dailyResults.length===0){
-    alert('请先扫描日线大方向。');
-    return;
-  }
-  requestNotificationPermission();
-  timerOn=true;
-  $('btnTimer').innerText='🛑 停止 15m 巡航';
-  $('btnTimer').classList.replace('b3','b2');
-  scheduleNext();
-  scanEntry();
-}
-function stopTimer(){
-  timerOn=false;
-  if(timerHandle) clearTimeout(timerHandle);
-  if(countdownHandle) clearInterval(countdownHandle);
-  timerHandle=null; countdownHandle=null;
-  $('btnTimer').innerText='⏱️ 开启 15m 扣扳机巡航';
-  $('btnTimer').classList.replace('b2','b3');
-  $('countdown').innerText='--:--';
-}
-function scheduleNext(){
-  const now=Date.now();
-  const step=15*60*1000;
-  const next=Math.ceil(now/step)*step+2000;
-  if(timerHandle) clearTimeout(timerHandle);
-  timerHandle=setTimeout(async()=>{
-    await scanEntry();
-    if(timerOn) scheduleNext();
-  }, next-now);
-  if(countdownHandle) clearInterval(countdownHandle);
-  countdownHandle=setInterval(()=>{
-    const left=Math.max(0,next-Date.now());
-    const m=Math.floor(left/60000), s=Math.floor((left%60000)/1000);
-    $('countdown').innerText=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    if(left<=0) clearInterval(countdownHandle);
-  },1000);
-}
-
-$('btnScan').onclick=()=>{
-  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  requestNotificationPermission();
-  scanDaily();
+// 页面加载完成后启动
+window.onload = () => {
+    // 用户交互后激活AudioContext（绕过浏览器自动播放限制）
+    document.body.addEventListener('click', () => {
+        if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+    }, { once: true });
+    
+    startTicker();
 };
-$('btnRescan').onclick=()=>{
-  if(!confirm('强制重扫会覆盖今日缓存，确定？')) return;
-  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  scanDaily(true);
-};
-$('btnTimer').onclick=()=>{
-  if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-  if(audioCtx.state==='suspended') audioCtx.resume();
-  if(timerOn) stopTimer(); else startTimer();
-};
-
-(function init(){
-  if(restoreCache()){
-    $('scanStatus').innerText=`今日已扫描 (${state.dailyResults.length}个符合日线)`;
-    $('btnScan').style.display='none';
-    $('btnRescan').style.display='block';
-    $('progress').innerText='读取今日缓存';
-    scanEntry().then(()=>render());
-  } else {
-    $('scanStatus').innerText='今日未扫描';
-    $('btnScan').style.display='block';
-    $('btnRescan').style.display='none';
-  }
-})();
 </script>
 </body>
 </html>
