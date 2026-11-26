@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ETH 15m 短线波段辅助</title>
+<title>ETH 15m 明确方向短线辅助</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:500px;margin:0 auto}
@@ -16,10 +16,9 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .signal-box.LONG{background:rgba(63,185,80,0.1);border-color:#3fb950;box-shadow:0 0 15px rgba(63,185,80,0.15);}
 .signal-box.SHORT{background:rgba(248,81,73,0.1);border-color:#f85149;box-shadow:0 0 15px rgba(248,81,73,0.15);}
 .sig-title{font-size:22px;font-weight:800;margin-bottom:6px;text-align:center;}
-.sig-title.LONG{color:#3fb950}.sig-title.SHORT{color:#f85149}.sig-title.WAIT{color:#8b949e}
+.sig-title.LONG{color:#3fb950}.sig-title.SHORT{color:#f85149}
 .sig-desc{font-size:13px;color:#c9d1d9;line-height:1.5;text-align:center;margin-bottom:15px;}
-.trade-plan{display:none;grid-template-columns:1fr;gap:12px;background:#0d1117;padding:15px;border-radius:10px;border:1px solid #30363d;}
-.trade-plan.show{display:grid;}
+.trade-plan{display:grid;grid-template-columns:1fr;gap:12px;background:#0d1117;padding:15px;border-radius:10px;border:1px solid #30363d;}
 .plan-row{display:flex;justify-content:space-between;align-items:center;font-size:15px;padding-bottom:8px;border-bottom:1px dashed #21262d;}
 .plan-row:last-child{border-bottom:none;padding-bottom:0;}
 .plan-row span{color:#8b949e;}
@@ -27,13 +26,11 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .indicator-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:15px;}
 .ind-card{background:#161b22;padding:10px;border-radius:8px;font-size:12px;text-align:center;border:1px solid #30363d;}
 .ind-card .val{font-size:14px;font-weight:700;margin-top:4px;color:#fff;}
-.sp{display:inline-block;width:13px;height:13px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-2px;margin-right:6px}
-@keyframes r{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
-<h2>💎 ETH 15m 短线波段辅助</h2>
+<h2>💎 ETH 15m 明确方向短线</h2>
 
 <div class="win">
   <div class="status-bar">
@@ -45,16 +42,16 @@ h2{font-size:16px;margin:0 0 10px;color:#ff9f0a;letter-spacing:.5px;display:flex
   <div class="p-change" id="priceChange">---</div>
 
   <div class="signal-box" id="signalBox">
-    <div class="sig-title WAIT" id="sigTitle"><span class="sp"></span>计算中...</div>
-    <div class="sig-desc" id="sigDesc">正在获取ETH 15分钟K线数据分析趋势</div>
+    <div class="sig-title" id="sigTitle">计算中...</div>
+    <div class="sig-desc" id="sigDesc">正在获取ETH数据分析方向...</div>
     
     <div class="trade-plan" id="tradePlan">
-      <div class="plan-row"><span>短线方向</span><b id="planDir">--</b></div>
-      <div class="plan-row"><span>建议入场价位</span><b id="planEntry" style="color:#58a6ff;">--</b></div>
-      <div class="plan-row"><span>防守止损点位</span><b id="planSL" style="color:#f85149;">--</b></div>
-      <div class="plan-row"><span>目标止盈点位</span><b id="planTP" style="color:#3fb950;">--</b></div>
+      <div class="plan-row"><span>交易方向</span><b id="planDir">--</b></div>
+      <div class="plan-row"><span>建议入场</span><b id="planEntry" style="color:#58a6ff;">--</b></div>
+      <div class="plan-row"><span>防守止损</span><b id="planSL" style="color:#f85149;">--</b></div>
+      <div class="plan-row"><span>目标止盈</span><b id="planTP" style="color:#3fb950;">--</b></div>
       <div class="plan-row" style="margin-top:5px; font-size:12px; color:#8b949e; border:none;">
-        <span>盈亏比:</span><b style="color:#fff;">1:2 (高盈亏比)</b>
+        <span>盈亏比:</span><b style="color:#fff;">1:2</b>
       </div>
     </div>
   </div>
@@ -73,7 +70,7 @@ const px=p=>p>=1000?p.toFixed(2):p>=1?p.toFixed(3):p.toFixed(5);
 let audioCtx=null;
 let countdown = 180; // 3分钟刷新一次
 let timerInterval = null;
-let lastSignalType = 'WAIT';
+let lastSignalType = '';
 
 function playAlert(type){
   if(!audioCtx) return;
@@ -160,7 +157,6 @@ async function analyzeETH() {
     const k = parseK(res.data);
     const n = k.c.length;
     const curC = k.c[n-1];
-    const curO = k.o[n-1];
     const prevC = k.c[n-2];
 
     const ema20 = calcEMA(k.c, 20);
@@ -185,49 +181,55 @@ async function analyzeETH() {
     const now = new Date();
     $('updateTime').innerText = `更新: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
 
-    // ===== 短线波段信号判断 =====
-    let signalType = 'WAIT';
+    // ===== 强行给出明确方向 =====
+    let signalType = '';
     let reason = '';
     let sl = 0, tp = 0;
 
-    // 获取最近5根K线的极值，用于设置止损
+    // 最近5根K线极值
     const lookback = 5;
     const recentLow = Math.min(...k.l.slice(-lookback));
     const recentHigh = Math.max(...k.h.slice(-lookback));
 
-    // 均线差距过滤（太近说明在震荡盘整，不参与）
-    const emaGap = Math.abs(curEma20 - curEma50) / curEma50;
+    // 核心逻辑：判断当前处于多头还是空头
+    // 1. 如果 EMA20 > EMA50，且当前价在 EMA20 之上，明确看多。
+    // 2. 如果 EMA20 < EMA50，且当前价在 EMA20 之下，明确看空。
+    // 3. 如果均线交织，我们以 EMA20 和 EMA50 的平均值作为中轴。价格在中轴之上做多，之下做空。
+    
+    const midLine = (curEma20 + curEma50) / 2;
 
-    if (emaGap > 0.004) { // 均线拉开0.4%以上，有短期趋势
-        if (curEma20 > curEma50 && curC > curEma20) {
-            // 多头短线
-            signalType = 'LONG';
-            reason = '15m级别EMA20上穿EMA50，多头趋势明确，价格依托均线，建议顺势做多。';
-            // 止损：最近5根低点或EMA20下方一点
-            sl = Math.min(recentLow * 0.999, curEma20 * 0.995);
-            if (sl >= curC) sl = curC * 0.99;
-            // 止盈：盈亏比 1:2
-            tp = curC + (curC - sl) * 2;
-        } 
-        else if (curEma20 < curEma50 && curC < curEma20) {
-            // 空头短线
-            signalType = 'SHORT';
-            reason = '15m级别EMA20下穿EMA50，空头趋势明确，价格受制于均线，建议顺势做空。';
-            // 止损：最近5根高点或EMA20上方一点
-            sl = Math.max(recentHigh * 1.001, curEma20 * 1.005);
-            if (sl <= curC) sl = curC * 1.01;
-            // 止盈：盈亏比 1:2
-            tp = curC - (sl - curC) * 2;
-        }
+    if (curEma20 > curEma50 && curC >= curEma20) {
+        // 强多头
+        signalType = 'LONG';
+        reason = '多头趋势强劲，价格依托EMA20，顺势做多。';
+        sl = Math.min(recentLow * 0.999, curEma20 * 0.995);
+        if (sl >= curC) sl = curC * 0.99;
+        tp = curC + (curC - sl) * 2;
+    } 
+    else if (curEma20 < curEma50 && curC <= curEma20) {
+        // 强空头
+        signalType = 'SHORT';
+        reason = '空头趋势强劲，价格受制于EMA20，顺势做空。';
+        sl = Math.max(recentHigh * 1.001, curEma20 * 1.005);
+        if (sl <= curC) sl = curC * 1.01;
+        tp = curC - (sl - curC) * 2;
     }
-
-    if (signalType === 'WAIT') {
-        if (emaGap <= 0.004) {
-            reason = '当前 EMA20 与 EMA50 距离极近，属于震荡盘整期，无明确短线方向，建议观望。';
-        } else if (curEma20 > curEma50) {
-            reason = '大方向偏多，但当前价格跌破EMA20，短线正在回调。等待重新站上EMA20再做多。';
+    else {
+        // 震荡交织期，根据当前价格在中轴线上下来强制给方向
+        if (curC > midLine) {
+            signalType = 'LONG';
+            reason = '均线交织震荡，但价格处于均线中轴上方，短线偏多，尝试低吸。';
+            // 止损放在中轴线下方一点
+            sl = midLine * 0.996;
+            if (sl >= curC) sl = curC * 0.99;
+            tp = curC + (curC - sl) * 2;
         } else {
-            reason = '大方向偏空，但当前价格突破EMA20，短线正在反弹。等待重新跌破EMA20再做空。';
+            signalType = 'SHORT';
+            reason = '均线交织震荡，但价格处于均线中轴下方，短线偏空，尝试高抛。';
+            // 止损放在中轴线上方一点
+            sl = midLine * 1.004;
+            if (sl <= curC) sl = curC * 1.01;
+            tp = curC - (sl - curC) * 2;
         }
     }
 
@@ -239,7 +241,6 @@ function renderSignal(type, reason, curC, sl, tp) {
     const box = $('signalBox');
     const title = $('sigTitle');
     const desc = $('sigDesc');
-    const plan = $('tradePlan');
 
     box.className = 'signal-box';
     title.className = 'sig-title';
@@ -247,34 +248,27 @@ function renderSignal(type, reason, curC, sl, tp) {
     if (type === 'LONG') {
         box.classList.add('LONG');
         title.classList.add('LONG');
-        title.innerText = '🚀 短线做多 (Long)';
-        plan.classList.add('show');
+        title.innerText = '🚀 明确做多 (Long)';
         
         $('planDir').innerText = '做多 (Buy)'; $('planDir').style.color = '#3fb950';
         $('planEntry').innerText = px(curC);
         $('planSL').innerText = px(sl);
         $('planTP').innerText = px(tp);
         
-        if (lastSignalType !== 'LONG' && lastSignalType !== 'WAIT') playAlert('LONG');
+        if (lastSignalType !== 'LONG' && lastSignalType !== '') playAlert('LONG');
     } 
     else if (type === 'SHORT') {
         box.classList.add('SHORT');
         title.classList.add('SHORT');
-        title.innerText = '🌊 短线做空 (Short)';
-        plan.classList.add('show');
+        title.innerText = '🌊 明确做空 (Short)';
         
         $('planDir').innerText = '做空 (Sell)'; $('planDir').style.color = '#f85149';
         $('planEntry').innerText = px(curC);
         $('planSL').innerText = px(sl);
         $('planTP').innerText = px(tp);
         
-        if (lastSignalType !== 'SHORT' && lastSignalType !== 'WAIT') playAlert('SHORT');
+        if (lastSignalType !== 'SHORT' && lastSignalType !== '') playAlert('SHORT');
     } 
-    else {
-        title.classList.add('WAIT');
-        title.innerText = '⏳ 观望 (Wait)';
-        plan.classList.remove('show');
-    }
     
     desc.innerText = reason;
     lastSignalType = type;
@@ -286,7 +280,7 @@ function startTicker() {
     timerInterval = setInterval(() => {
         countdown--;
         if (countdown <= 0) {
-            countdown = 180; // 3分钟刷新一次K线数据
+            countdown = 180; // 3分钟刷新一次
             analyzeETH();
         }
         $('nextTimer').innerText = `刷新倒计时: ${countdown}s`;
