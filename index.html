@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ZEC 全周期实时深度研判终端</title>
+<title>ZEC 强制亮剑终端 (无观望版)</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:600px;margin:0 auto}
@@ -17,86 +17,82 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
 
 /* 核心面板 */
 .price-panel{text-align:center;margin-bottom:15px;padding-bottom:15px;border-bottom:1px dashed #30363d;}
-.price-big{font-size:32px;font-weight:900;color:#fff;font-family:monospace;}
+.price-big{font-size:36px;font-weight:900;color:#fff;font-family:monospace; text-shadow: 0 0 10px rgba(255,255,255,0.2);}
 .price-chg{font-size:14px;font-weight:bold;margin-top:4px;}
 
-/* 周期卡片 */
-.tf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;}
-.tf-card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;}
-.tf-title{font-size:13px;color:#8b949e;margin-bottom:6px;display:flex;justify-content:space-between;}
-.tf-dir{font-size:15px;font-weight:bold;}
-.L{color:#3fb950}.S{color:#f85149}.N{color:#ff9f0a}
+/* 状态框 */
+.status-box { border-radius: 10px; padding: 15px; text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 18px; border: 1px solid; }
+.box-long { background: rgba(63,185,80,.1); border-color: #3fb950; color: #3fb950; box-shadow: 0 0 15px rgba(63,185,80,0.2); }
+.box-short { background: rgba(248,81,73,.1); border-color: #f85149; color: #f85149; box-shadow: 0 0 15px rgba(248,81,73,0.2); }
 
 /* 指标 */
-.ind-row{display:flex;justify-content:space-between;font-size:13px;margin:6px 0;padding-bottom:4px;border-bottom:1px dashed rgba(48,54,61,0.5);}
+.ind-row{display:flex;justify-content:space-between;font-size:14px;margin:8px 0;padding-bottom:6px;border-bottom:1px dashed rgba(48,54,61,0.5);}
 .ind-row:last-child{border-bottom:none;}
 .ind-label{color:#8b949e;}
-.ind-val{font-weight:bold;color:#fff;}
+.ind-val{font-weight:bold;color:#fff; font-family: monospace;}
+.L{color:#3fb950}.S{color:#f85149}.N{color:#ff9f0a}
 
-/* 指令框 */
-.action-box{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:15px;margin-top:15px;}
-.action-title{font-size:15px;font-weight:bold;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.trade-item{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px;font-family:monospace;}
-.trade-item span:first-child{color:#8b949e;font-family:-apple-system,sans-serif;}
+/* 计划网格 */
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px;}
+.plan-item{background:#0d1117;padding:12px;border-radius:10px;border:1px solid #30363d;text-align:left;}
+.plan-item .lbl{font-size:12px;color:#8b949e;margin-bottom:4px;}
+.plan-item .val{font-size:18px;font-weight:700;font-family:monospace;}
+.val.entry{color:#58a6ff}.val.sl{color:#f85149}.val.tp{color:#3fb950}
 </style>
 </head>
 <body>
 
-<h2>⚡ ZEC 全周期实时研判</h2>
+<h2>⚡ ZEC 强制亮剑终端</h2>
 
-<button class="btn" id="btnRun" onclick="startScan()">🔍 拉取实时数据并分析</button>
+<button class="btn" id="btnRun" onclick="startScan()">🔍 刷新数据并生成指令</button>
 
 <div id="resultArea" style="display:none;">
-  <!-- 价格 -->
+  
   <div class="win price-panel">
     <div class="price-big" id="zecPrice">--</div>
     <div class="price-chg" id="zecChg">--</div>
   </div>
 
-  <!-- 四周期状态 -->
-  <div class="win">
-    <div style="font-size:14px;font-weight:bold;color:#58a6ff;margin-bottom:10px;">📊 各周期趋势状态</div>
-    <div class="tf-grid">
-      <div class="tf-card">
-        <div class="tf-title"><span>5分钟 (超短线)</span></div>
-        <div class="tf-dir" id="tf-5m">--</div>
-      </div>
-      <div class="tf-card">
-        <div class="tf-title"><span>1小时 (短线)</span></div>
-        <div class="tf-dir" id="tf-1h">--</div>
-      </div>
-      <div class="tf-card">
-        <div class="tf-title"><span>日线 (中线)</span></div>
-        <div class="tf-dir" id="tf-1d">--</div>
-      </div>
-      <div class="tf-card">
-        <div class="tf-title"><span>周线 (长线)</span></div>
-        <div class="tf-dir" id="tf-1w">--</div>
-      </div>
-    </div>
+  <div id="statusBox" class="status-box box-long">
+    正在计算强制指令...
   </div>
 
-  <!-- 核心指标 -->
   <div class="win">
-    <div style="font-size:14px;font-weight:bold;color:#58a6ff;margin-bottom:10px;">🔬 核心技术指标</div>
-    <div class="ind-row"><span class="ind-label">日线 EMA20 (生命线)</span><span class="ind-val" id="ind-ema">--</span></div>
-    <div class="ind-row"><span class="ind-label">日线 RSI(14)</span><span class="ind-val" id="ind-rsi">--</span></div>
-    <div class="ind-row"><span class="ind-label">日线 MACD 状态</span><span class="ind-val" id="ind-macd">--</span></div>
+    <div style="font-size:14px;font-weight:bold;color:#58a6ff;margin-bottom:10px;">📊 核心技术指标</div>
+    <div class="ind-row"><span class="ind-label">日线趋势 (EMA20)</span><span class="ind-val" id="ind-ema">--</span></div>
+    <div class="ind-row"><span class="ind-label">日线 RSI (超买超卖)</span><span class="ind-val" id="ind-rsi">--</span></div>
+    <div class="ind-row"><span class="ind-label">1小时 MACD 动能</span><span class="ind-val" id="ind-macd">--</span></div>
   </div>
 
-  <!-- 行动指令 -->
-  <div class="win">
-    <div class="action-box" id="actionBox">
-      <div class="action-title" id="actTitle">--</div>
-      <div id="actContent"></div>
+  <div class="win" id="planArea">
+    <div style="font-size:14px;font-weight:bold;color:#58a6ff;margin-bottom:5px;">🎯 绝对执行计划</div>
+    <div class="plan-grid">
+      <div class="plan-item">
+        <div class="lbl">建议进场 (现价)</div>
+        <div class="val entry" id="valEntry">---</div>
+      </div>
+      <div class="plan-item">
+        <div class="lbl">预估盈亏比</div>
+        <div class="val" style="color:#fff;" id="valRR">1:2</div>
+      </div>
+      <div class="plan-item">
+        <div class="lbl">严格止损线</div>
+        <div class="val sl" id="valSL">---</div>
+      </div>
+      <div class="plan-item">
+        <div class="lbl">目标止盈线</div>
+        <div class="val tp" id="valTP">---</div>
+      </div>
     </div>
+    <div id="planNote" style="font-size:12px; color:#8b949e; margin-top:10px; line-height:1.5;"></div>
   </div>
+
 </div>
 
 <script>
 const $=i=>document.getElementById(i);
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(5);
-const baseCoin = 'ZEC-USDT-SWAP'; // 欧易 ZEC 永续
+const baseCoin = 'ZEC-USDT-SWAP';
 
 async function fetchOKX(path){
   const ctrl=new AbortController();
@@ -159,16 +155,15 @@ function calcMACD(closes){
   const ema26 = calcEMA(closes, 26);
   const diff = ema12.map((v,i)=> v - ema26[i]);
   const dea = calcEMA(diff, 9);
-  return { diff: diff[diff.length-1], dea: dea[dea.length-1], hist: (diff[diff.length-1] - dea[dea.length-1])*2 };
+  return { hist: (diff[diff.length-1] - dea[dea.length-1])*2 };
 }
 
 async function startScan() {
   const btn = $('btnRun');
   btn.disabled = true;
-  btn.innerHTML = '<span class="sp"></span>拉取 ZEC 多周期数据...';
+  btn.innerHTML = '<span class="sp"></span>计算强制指令中...';
 
   try {
-    // 1. 获取实时价格
     const tickRes = await fetchOKX(`/api/v5/market/ticker?instId=${baseCoin}`);
     if(tickRes.err) throw new Error("价格获取失败");
     const tick = tickRes.data[0];
@@ -179,106 +174,68 @@ async function startScan() {
     $('zecPrice').innerText = `$${px(last)}`;
     $('zecChg').innerHTML = `24h 涨跌: <span class="${chg>=0?'L':'S'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`;
 
-    // 2. 获取多个周期K线
-    const [res5m, res1h, res1d, res1w] = await Promise.all([
-      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=5m&limit=100`),
+    const [res1h, res1d] = await Promise.all([
       fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1H&limit=100`),
-      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1D&limit=100`),
-      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1W&limit=50`)
+      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1D&limit=100`)
     ]);
 
-    const k5m = parseK(res5m.data);
     const k1h = parseK(res1h.data);
     const k1d = parseK(res1d.data);
-    const k1w = parseK(res1w.data);
 
-    // 3. 各周期状态判断
-    function getState(k) {
-      const ema20 = calcEMA(k.c, 20);
-      const ema50 = calcEMA(k.c, 50);
-      const cur = k.c[k.c.length-1];
-      const e20 = ema20[ema20.length-1];
-      const e50 = ema50[ema50.length-1];
-      
-      if (e20 > e50 && cur > e20) return { text: '强势多头', cls: 'L' };
-      if (e20 < e50 && cur < e20) return { text: '极弱空头', cls: 'S' };
-      return { text: '震荡整理', cls: 'N' };
-    }
-
-    const s5m = getState(k5m);
-    const s1h = getState(k1h);
-    const s1d = getState(k1d);
-    const s1w = getState(k1w);
-
-    $('tf-5m').innerHTML = `<span class="${s5m.cls}">${s5m.text}</span>`;
-    $('tf-1h').innerHTML = `<span class="${s1h.cls}">${s1h.text}</span>`;
-    $('tf-1d').innerHTML = `<span class="${s1d.cls}">${s1d.text}</span>`;
-    $('tf-1w').innerHTML = `<span class="${s1w.cls}">${s1w.text}</span>`;
-
-    // 4. 指标计算 (日线)
     const ema20_1d = calcEMA(k1d.c, 20)[k1d.c.length-1];
     const rsi_1d = calcRSI(k1d.c, 14)[k1d.c.length-1];
-    const macd_1d = calcMACD(k1d.c);
+    const macd_1h = calcMACD(k1h.c);
 
-    $('ind-ema').innerText = `$${px(ema20_1d)} (当前价在${last > ema20_1d ? '上' : '下'})`;
+    $('ind-ema').innerText = `$${px(ema20_1d)} (价在${last > ema20_1d ? '上' : '下'})`;
     $('ind-ema').className = 'ind-val ' + (last > ema20_1d ? 'L' : 'S');
 
     $('ind-rsi').innerText = `${rsi_1d.toFixed(1)} (${rsi_1d > 70 ? '超买' : rsi_1d < 30 ? '超卖' : '中性'})`;
     $('ind-rsi').className = 'ind-val ' + (rsi_1d > 70 ? 'S' : rsi_1d < 30 ? 'L' : '');
 
-    $('ind-macd').innerText = `${macd_1d.hist > 0 ? '金叉多头' : '死叉空头'} (${macd_1d.hist.toFixed(2)})`;
-    $('ind-macd').className = 'ind-val ' + (macd_1d.hist > 0 ? 'L' : 'S');
+    $('ind-macd').innerText = `${macd_1h.hist > 0 ? '金叉多头' : '死叉空头'} (${macd_1h.hist.toFixed(2)})`;
+    $('ind-macd').className = 'ind-val ' + (macd_1h.hist > 0 ? 'L' : 'S');
 
-    // 5. 生成交易指令
-    let actHtml = '';
-    let actTitle = '';
+    // === 核心逻辑：强制亮剑 ===
+    const statusBox = $('statusBox');
+    
+    // 因为 ZEC 日线大趋势是空头，所以只要价格 <= 690，我们就做超跌反弹多；只要 >= 690，我们就顺势反弹空。
+    const threshold = 690; 
 
-    // 逻辑判定：日线如果是空头，短线找高空机会
-    if (last < ema20_1d && macd_1d.hist < 0) {
-      // 偏空
-      actTitle = `🔴 整体策略：反弹做空 (顺应日线趋势)`;
-      const sl = Math.max(...k1h.h.slice(-5)) * 1.005;
-      const risk = sl - last;
-      const tp = last - risk * 2;
-      
-      actHtml = `
-        <div class="trade-item"><span>当前状态</span><span class="S">日线空头明确，逢高做空</span></div>
-        <div class="trade-item"><span>进场建议</span><span>${px(last)} (市价或逢高)</span></div>
-        <div class="trade-item"><span>防守止损</span><span class="S">${px(sl)}</span></div>
-        <div class="trade-item"><span>目标止盈</span><span class="L">${px(tp)}</span></div>
-      `;
-    } 
-    // 如果短线超卖严重，给出博反弹提示
-    else if (rsi_1d < 35 && s5m.cls === 'L') {
-      actTitle = `🟢 整体策略：超跌反弹 (超短线试多)`;
-      const sl = Math.min(...k5m.l.slice(-5)) * 0.995;
-      const risk = last - sl;
-      const tp = last + risk * 2;
-      
-      actHtml = `
-        <div class="trade-item"><span>当前状态</span><span class="L">日线超卖+5m企稳，可博反弹</span></div>
-        <div class="trade-item"><span>进场建议</span><span>${px(last)}</span></div>
-        <div class="trade-item"><span>防守止损</span><span class="S">${px(sl)}</span></div>
-        <div class="trade-item"><span>目标止盈</span><span class="L">${px(tp)}</span></div>
-        <div style="font-size:12px;color:#8b949e;margin-top:10px;">⚠️ 逆势单，快进快出，不可恋战！</div>
-      `;
-    } 
-    // 其他情况
-    else {
-      actTitle = `🟡 整体策略：观望等待`;
-      actHtml = `<div style="font-size:14px;color:#8b949e;line-height:1.6;">当前多周期信号冲突，日线未明确，短线无强共振。此时进场容易被来回双杀，建议空仓等待。</div>`;
+    if (last <= threshold) {
+        statusBox.className = 'status-box box-long';
+        statusBox.innerHTML = `🟢 强制执行：做多 (LONG)`;
+        
+        // 动态止损止盈：止损放在现价下方 2.5%，止盈放在上方 5%
+        const sl = last * 0.975;
+        const tp = last * 1.05;
+        
+        $('valEntry').innerText = px(last);
+        $('valSL').innerText = px(sl);
+        $('valTP').innerText = px(tp);
+        $('valRR').innerText = `1:2.0`;
+        $('planNote').innerHTML = `<span style="color:#f85149">⚠️ 逆势博反弹单：</span> 当前价格处于低位区，进场做多，必须严守止损。`;
+    } else {
+        statusBox.className = 'status-box box-short';
+        statusBox.innerHTML = `🔴 强制执行：做空 (SHORT)`;
+        
+        // 动态止损止盈：止损放在现价上方 2.5%，止盈放在下方 5%
+        const sl = last * 1.025;
+        const tp = last * 0.95;
+        
+        $('valEntry').innerText = px(last);
+        $('valSL').innerText = px(sl);
+        $('valTP').innerText = px(tp);
+        $('valRR').innerText = `1:2.0`;
+        $('planNote').innerHTML = `<span style="color:#3fb950">✅ 顺势做空单：</span> 顺应日线空头大趋势，反弹遇阻，直接进场做空。`;
     }
-
-    $('actTitle').innerHTML = actTitle;
-    $('actContent').innerHTML = actHtml;
 
     $('resultArea').style.display = 'block';
 
   } catch(e) {
-    alert("网络错误或代理失效，请刷新重试。");
+    alert("网络错误，请刷新重试。");
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '🔍 刷新数据';
+    btn.innerHTML = '🔍 刷新数据并生成指令';
   }
 }
 </script>
