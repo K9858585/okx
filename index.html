@@ -3,120 +3,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>OKX 前50成交额+30专属 深度AI优选</title>
+<title>ZEC 全周期实时深度研判终端</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:600px;margin:0 auto}
 h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex;justify-content:center;align-items:center;gap:8px}
-.win{background:#11161d;border:1px solid #30363d;border-radius:14px;padding:20px;margin-bottom:14px;text-align:center}
+.win{background:#11161d;border:1px solid #30363d;border-radius:14px;padding:16px;margin-bottom:14px}
 .btn{display:block;width:100%;padding:15px;margin-bottom:15px;border-radius:10px;border:none;font-size:16px;font-weight:700;cursor:pointer;transition:opacity 0.2s;background:#ff9f0a;color:#000;box-shadow:0 4px 15px rgba(255,159,10,0.3)}
 .btn:active{opacity:0.7}
 .btn:disabled{background:#30363d;color:#8b949e;box-shadow:none;cursor:not-allowed}
 .sp{display:inline-block;width:16px;height:16px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes r{to{transform:rotate(360deg)}}
 
-/* 推荐结果卡片 */
-.result-card{display:none;background:#161b22;border:2px solid #ff9f0a;border-radius:14px;padding:20px;position:relative;box-shadow:0 0 25px rgba(255,159,10,0.15);animation:pop 0.4s ease-out}
-@keyframes pop { 0%{transform:scale(0.95);opacity:0} 100%{transform:scale(1);opacity:1} }
-.crown{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg, #ff9f0a, #ffb347);color:#000;font-weight:800;font-size:13px;padding:4px 16px;border-radius:12px;box-shadow:0 4px 10px rgba(255,159,10,0.4);white-space:nowrap;}
+/* 核心面板 */
+.price-panel{text-align:center;margin-bottom:15px;padding-bottom:15px;border-bottom:1px dashed #30363d;}
+.price-big{font-size:32px;font-weight:900;color:#fff;font-family:monospace;}
+.price-chg{font-size:14px;font-weight:bold;margin-top:4px;}
 
-.coin-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:15px;margin-top:10px;border-bottom:1px dashed #30363d;padding-bottom:12px;}
-.coin-name{font-size:26px;font-weight:800;color:#fff;}
-.coin-dir{font-size:15px;font-weight:700;padding:4px 12px;border-radius:8px;}
-.coin-dir.L{color:#3fb950;background:rgba(63,185,80,.15);border:1px solid #3fb950;}
-.coin-dir.S{color:#f85149;background:rgba(248,81,73,.15);border:1px solid #f85149;}
-.score-box{font-size:24px;font-weight:800;color:#ff9f0a;text-align:right;line-height:1.2;}
-.score-box span{font-size:12px;color:#8b949e;font-weight:400;}
+/* 周期卡片 */
+.tf-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:15px;}
+.tf-card{background:#161b22;border:1px solid #30363d;border-radius:10px;padding:12px;}
+.tf-title{font-size:13px;color:#8b949e;margin-bottom:6px;display:flex;justify-content:space-between;}
+.tf-dir{font-size:15px;font-weight:bold;}
+.L{color:#3fb950}.S{color:#f85149}.N{color:#ff9f0a}
 
-/* 交易计划 */
-.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;}
-.plan-item{background:#0d1117;padding:12px;border-radius:10px;border:1px solid #30363d;text-align:left;}
-.plan-item .lbl{font-size:12px;color:#8b949e;margin-bottom:4px;}
-.plan-item .val{font-size:18px;font-weight:700;font-family:monospace;}
-.val.entry{color:#58a6ff}.val.sl{color:#f85149}.val.tp{color:#3fb950}.val.rr{color:#fff}
+/* 指标 */
+.ind-row{display:flex;justify-content:space-between;font-size:13px;margin:6px 0;padding-bottom:4px;border-bottom:1px dashed rgba(48,54,61,0.5);}
+.ind-row:last-child{border-bottom:none;}
+.ind-label{color:#8b949e;}
+.ind-val{font-weight:bold;color:#fff;}
 
-/* 分析报告 */
-.analysis{background:#0d1117;padding:15px;border-radius:10px;border:1px solid #30363d;text-align:left;}
-.analysis h4{font-size:13px;color:#ff9f0a;margin:0 0 10px 0;display:flex;align-items:center;gap:6px;}
-.reason-list{font-size:13px;line-height:1.7;color:#c9d1d9;margin:0;padding-left:18px;}
-.reason-list li{margin-bottom:6px;}
-.reason-list li::marker{color:#3fb950;}
-
-/* 备选列表 */
-.others{display:none;margin-top:15px;text-align:left;}
-.others h4{font-size:14px;color:#8b949e;margin-bottom:10px;}
-.other-item{display:flex;justify-content:space-between;font-size:13px;padding:8px 10px;background:#161b22;border-radius:8px;margin-bottom:6px;border:1px solid #30363d;}
+/* 指令框 */
+.action-box{background:#0d1117;border:1px solid #30363d;border-radius:10px;padding:15px;margin-top:15px;}
+.action-title{font-size:15px;font-weight:bold;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.trade-item{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px;font-family:monospace;}
+.trade-item span:first-child{color:#8b949e;font-family:-apple-system,sans-serif;}
 </style>
 </head>
 <body>
 
-<h2>🤖 前50成交额+30专属 深度优选</h2>
+<h2>⚡ ZEC 全周期实时研判</h2>
 
-<button class="btn" id="btnRun" onclick="startScan()">🔍 一键扫描：推荐当前最佳入场</button>
+<button class="btn" id="btnRun" onclick="startScan()">🔍 拉取实时数据并分析</button>
 
-<!-- 推荐结果 -->
-<div class="result-card" id="resultCard">
-  <div class="crown">👑 当前最佳入场推荐</div>
-  <div class="coin-head">
-    <div>
-      <div class="coin-name" id="resCoin">ETH</div>
-      <div style="font-size:12px;color:#8b949e;margin-top:4px;">欧易永续 · 深度分析池</div>
-    </div>
-    <div style="text-align:right;">
-      <div class="coin-dir" id="resDir">做多</div>
+<div id="resultArea" style="display:none;">
+  <!-- 价格 -->
+  <div class="win price-panel">
+    <div class="price-big" id="zecPrice">--</div>
+    <div class="price-chg" id="zecChg">--</div>
+  </div>
+
+  <!-- 四周期状态 -->
+  <div class="win">
+    <div style="font-size:14px;font-weight:bold;color:#58a6ff;margin-bottom:10px;">📊 各周期趋势状态</div>
+    <div class="tf-grid">
+      <div class="tf-card">
+        <div class="tf-title"><span>5分钟 (超短线)</span></div>
+        <div class="tf-dir" id="tf-5m">--</div>
+      </div>
+      <div class="tf-card">
+        <div class="tf-title"><span>1小时 (短线)</span></div>
+        <div class="tf-dir" id="tf-1h">--</div>
+      </div>
+      <div class="tf-card">
+        <div class="tf-title"><span>日线 (中线)</span></div>
+        <div class="tf-dir" id="tf-1d">--</div>
+      </div>
+      <div class="tf-card">
+        <div class="tf-title"><span>周线 (长线)</span></div>
+        <div class="tf-dir" id="tf-1w">--</div>
+      </div>
     </div>
   </div>
 
-  <div class="score-box" style="margin-bottom:15px;">
-    <div id="resScore">95</div>
-    <span>综合技术评分</span>
+  <!-- 核心指标 -->
+  <div class="win">
+    <div style="font-size:14px;font-weight:bold;color:#58a6ff;margin-bottom:10px;">🔬 核心技术指标</div>
+    <div class="ind-row"><span class="ind-label">日线 EMA20 (生命线)</span><span class="ind-val" id="ind-ema">--</span></div>
+    <div class="ind-row"><span class="ind-label">日线 RSI(14)</span><span class="ind-val" id="ind-rsi">--</span></div>
+    <div class="ind-row"><span class="ind-label">日线 MACD 状态</span><span class="ind-val" id="ind-macd">--</span></div>
   </div>
 
-  <div class="plan-grid">
-    <div class="plan-item">
-      <div class="lbl">建议入场价</div>
-      <div class="val entry" id="resEntry">---</div>
-    </div>
-    <div class="plan-item">
-      <div class="lbl">预估盈亏比</div>
-      <div class="val rr" id="resRR">1 : 2.0</div>
-    </div>
-    <div class="plan-item">
-      <div class="lbl">防守止损点位</div>
-      <div class="val sl" id="resSL">---</div>
-    </div>
-    <div class="plan-item">
-      <div class="lbl">目标止盈点位</div>
-      <div class="val tp" id="resTP">---</div>
+  <!-- 行动指令 -->
+  <div class="win">
+    <div class="action-box" id="actionBox">
+      <div class="action-title" id="actTitle">--</div>
+      <div id="actContent"></div>
     </div>
   </div>
-
-  <div class="analysis">
-    <h4>🔬 严密分析报告</h4>
-    <ul class="reason-list" id="resReasons">
-      <!-- 动态生成 -->
-    </ul>
-  </div>
-</div>
-
-<!-- 备选列表 -->
-<div class="others" id="othersBox">
-  <h4>⚖️ 其他符合入场条件的备选币种</h4>
-  <div id="othersList"></div>
 </div>
 
 <script>
 const $=i=>document.getElementById(i);
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(5);
+const baseCoin = 'ZEC-USDT-SWAP'; // 欧易 ZEC 永续
 
-// 你之前给的 30 个专属保底币种（这里挑选了之前你指定的部分重点）
-const CUSTOM_COINS = [
-  "BTC", "ETH", "SOL", "DOGE", "XRP", "PEPE", "BCH", "LTC", "TRX", "ADA", 
-  "AVAX", "LINK", "DOT", "SUI", "APT", "NEAR", "FIL", "OP", "ARB", "UNI",
-  "INJ", "AAVE", "CRV", "WLD", "ONDO", "JUP", "SHIB", "ZRO", "TAO", "BNB"
-];
-
-// ============ 核心数据获取 ============
 async function fetchOKX(path){
   const ctrl=new AbortController();
   const t=setTimeout(()=>ctrl.abort(),6000);
@@ -140,20 +121,6 @@ function parseK(d){
   return{o,h,l,c};
 }
 
-async function batchFetch(tasks, concurrency=8){
-  const results=new Array(tasks.length).fill(null);
-  let idx=0;
-  async function worker(){
-    while(idx<tasks.length){
-      const i=idx++;
-      try{ results[i]=await tasks[i](); }catch(e){ results[i]=null; }
-    }
-  }
-  await Promise.all(Array(Math.min(concurrency,tasks.length)).fill().map(worker));
-  return results;
-}
-
-// ============ 技术指标 ============
 function calcEMA(closes,period){
   if(closes.length<period) return [];
   const k=2/(period+1);
@@ -187,219 +154,132 @@ function calcRSI(closes, period=14){
   return new Array(period).fill(NaN).concat(rsi.slice(period));
 }
 
-// ============ 深度分析引擎 ============
-function analyzeCoin(k1h, k15m, base) {
-    const n1 = k1h.c.length;
-    const n15 = k15m.c.length;
-    if (n1 < 50 || n15 < 30) return null;
-
-    const ema20_1h = calcEMA(k1h.c, 20)[n1-1];
-    const ema50_1h = calcEMA(k1h.c, 50)[n1-1];
-    const curC = k15m.c[n15-1];
-    const curO = k15m.o[n15-1];
-    const curL = k15m.l[n15-1];
-    const curH = k15m.h[n15-1];
-    
-    const ema20_15 = calcEMA(k15m.c, 20)[n15-1];
-    const ema50_15 = calcEMA(k15m.c, 50)[n15-1];
-    const rsi15 = calcRSI(k15m.c, 14)[n15-1];
-
-    let direction = '';
-    let reasons = [];
-    let score = 0;
-    let sl = 0, tp = 0;
-
-    const isBull1h = ema20_1h > ema50_1h;
-    const isBear1h = ema20_1h < ema50_1h;
-
-    // ---------- 做多逻辑 ----------
-    if (isBull1h && curC > ema20_1h) {
-        score += 40;
-        reasons.push(`1H级别 EMA20(${px(ema20_1h)}) > EMA50(${px(ema50_1h)})，大方向明确处于多头趋势。`);
-
-        const distToEma20 = Math.abs(curC - ema20_15) / curC;
-        
-        if (distToEma20 < 0.005 && curC > curO) {
-            direction = 'LONG';
-            score += 30;
-            reasons.push(`15m级别价格成功回踩 EMA20(${px(ema20_15)}) 支撑，且最新K线收出阳线，表明回调结束。`);
-            
-            if (rsi15 < 45) {
-                score += 15;
-                reasons.push(`15m RSI 报 ${rsi15.toFixed(1)}，脱离超买区，有向上修复空间。`);
-            }
-
-            sl = Math.min(...k15m.l.slice(-5)) * 0.998;
-            if (sl >= curC) sl = curC * 0.99;
-            const risk = curC - sl;
-            tp = curC + risk * 2;
-
-            if (risk / curC < 0.008) {
-                score += 15;
-                reasons.push(`止损空间控制在 ${(risk/curC*100).toFixed(2)}% 以内，具有极高的盈亏比结构。`);
-            }
-        } else if (curC <= ema20_15 && rsi15 < 35 && curC > curO) {
-            direction = 'LONG';
-            score += 20;
-            reasons.push(`15m级别出现超跌，RSI跌至 ${rsi15.toFixed(1)}，且K线收阳，存在均值回归做多机会。`);
-            sl = Math.min(...k15m.l.slice(-5)) * 0.995;
-            const risk = curC - sl;
-            tp = curC + risk * 2;
-        }
-    }
-    // ---------- 做空逻辑 ----------
-    else if (isBear1h && curC < ema20_1h) {
-        score += 40;
-        reasons.push(`1H级别 EMA20(${px(ema20_1h)}) < EMA50(${px(ema50_1h)})，大方向明确处于空头趋势。`);
-
-        const distToEma20 = Math.abs(curC - ema20_15) / curC;
-        
-        if (distToEma20 < 0.005 && curC < curO) {
-            direction = 'SHORT';
-            score += 30;
-            reasons.push(`15m级别价格反抽 EMA20(${px(ema20_15)}) 受阻，且最新K线收出阴线，表明反弹结束。`);
-            
-            if (rsi15 > 55) {
-                score += 15;
-                reasons.push(`15m RSI 报 ${rsi15.toFixed(1)}，脱离超卖区，有向下回落空间。`);
-            }
-
-            sl = Math.max(...k15m.h.slice(-5)) * 1.002;
-            if (sl <= curC) sl = curC * 1.01;
-            const risk = sl - curC;
-            tp = curC - risk * 2;
-
-            if (risk / curC < 0.008) {
-                score += 15;
-                reasons.push(`止损空间控制在 ${(risk/curC*100).toFixed(2)}% 以内，具有极高的盈亏比结构。`);
-            }
-        } else if (curC >= ema20_15 && rsi15 > 65 && curC < curO) {
-            direction = 'SHORT';
-            score += 20;
-            reasons.push(`15m级别出现超买，RSI高达 ${rsi15.toFixed(1)}，且K线收阴，存在均值回归做空机会。`);
-            sl = Math.max(...k15m.h.slice(-5)) * 1.005;
-            const risk = sl - curC;
-            tp = curC - risk * 2;
-        }
-    }
-
-    if (direction && score >= 50) {
-        return { base, direction, entry: curC, sl, tp, score, reasons };
-    }
-    return null;
+function calcMACD(closes){
+  const ema12 = calcEMA(closes, 12);
+  const ema26 = calcEMA(closes, 26);
+  const diff = ema12.map((v,i)=> v - ema26[i]);
+  const dea = calcEMA(diff, 9);
+  return { diff: diff[diff.length-1], dea: dea[dea.length-1], hist: (diff[diff.length-1] - dea[dea.length-1])*2 };
 }
 
-// ============ 运行扫描 ============
 async function startScan() {
-    const btn = $('btnRun');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="sp"></span>获取成交额前50名...';
-    $('resultCard').style.display = 'none';
-    $('othersBox').style.display = 'none';
+  const btn = $('btnRun');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="sp"></span>拉取 ZEC 多周期数据...';
 
-    try {
-        // 1. 获取行情，并按真实 USDT 成交额排序，取前 50
-        const tickerRes = await fetchOKX('/api/v5/market/tickers?instType=SWAP');
-        if (tickerRes.err) throw new Error("获取行情失败");
-
-        const usdtList = tickerRes.data.filter(t => t.instId.endsWith('USDT-SWAP'));
-        usdtList.sort((a,b) => {
-            const volA = parseFloat(a.volCcy24h || 0) * parseFloat(a.last || 0);
-            const volB = parseFloat(b.volCcy24h || 0) * parseFloat(b.last || 0);
-            return volB - volA;
-        });
-        
-        // 取前 50 名
-        const top50 = usdtList.slice(0, 50).map(t => t.instId.split('-')[0]);
-
-        // 2. 将前 50 名与你的专属 30 币种合并去重
-        const scanSet = new Set([...top50, ...CUSTOM_COINS]);
-        const scanList = Array.from(scanSet);
-
-        btn.innerHTML = `<span class="sp"></span>深度分析 ${scanList.length} 个币种...`;
-
-        // 3. 并发拉取 K 线数据
-        let done = 0;
-        const tasks = scanList.map(base => (async()=>{
-            const instId = `${base}-USDT-SWAP`;
-            const [res1h, res15m] = await Promise.all([
-                fetchOKX(`/api/v5/market/candles?instId=${instId}&bar=1H&limit=60`),
-                fetchOKX(`/api/v5/market/candles?instId=${instId}&bar=15m&limit=40`)
-            ]);
-            done++;
-            btn.innerHTML = `<span class="sp"></span>深度分析中 ${done}/${scanList.length}...`;
-            
-            if (res1h.err || res15m.err || !res1h.data || !res15m.data) return null;
-            
-            const k1h = parseK(res1h.data);
-            const k15m = parseK(res15m.data);
-            return analyzeCoin(k1h, k15m, base);
-        }));
-
-        const rawResults = await batchFetch(tasks, 8); // 并发限制 8 防限流
-        const validResults = rawResults.filter(r => r !== null);
-
-        // 4. 排序取最优
-        validResults.sort((a,b) => b.score - a.score);
-        renderResult(validResults);
-
-    } catch (e) {
-        alert("网络错误或代理拦截，请刷新重试。");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '🔍 重新扫描：推荐当前最佳入场';
-    }
-}
-
-// ============ 渲染结果 ============
-function renderResult(results) {
-    if (results.length === 0) {
-        alert('当前池中未出现符合“严密盈亏比结构”的绝佳点位，建议空仓观望。');
-        return;
-    }
-
-    const best = results[0];
-    const isLong = best.direction === 'LONG';
-
-    // 主推荐卡片
-    $('resCoin').innerText = best.base;
-    const dirEl = $('resDir');
-    dirEl.innerText = isLong ? '做多 (Long)' : '做空 (Short)';
-    dirEl.className = 'coin-dir ' + (isLong ? 'L' : 'S');
+  try {
+    // 1. 获取实时价格
+    const tickRes = await fetchOKX(`/api/v5/market/ticker?instId=${baseCoin}`);
+    if(tickRes.err) throw new Error("价格获取失败");
+    const tick = tickRes.data[0];
+    const last = parseFloat(tick.last);
+    const open24 = parseFloat(tick.open24h);
+    const chg = ((last - open24) / open24) * 100;
     
-    $('resScore').innerText = best.score;
-    $('resEntry').innerText = px(best.entry);
-    $('resSL').innerText = px(best.sl);
-    $('resTP').innerText = px(best.tp);
-    
-    const risk = Math.abs(best.entry - best.sl);
-    const reward = Math.abs(best.tp - best.entry);
-    $('resRR').innerText = `1 : ${(reward/risk).toFixed(2)}`;
+    $('zecPrice').innerText = `$${px(last)}`;
+    $('zecChg').innerHTML = `24h 涨跌: <span class="${chg>=0?'L':'S'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`;
 
-    let html = '';
-    best.reasons.forEach(r => {
-        html += `<li>${r}</li>`;
-    });
-    $('resReasons').innerHTML = html;
+    // 2. 获取多个周期K线
+    const [res5m, res1h, res1d, res1w] = await Promise.all([
+      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=5m&limit=100`),
+      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1H&limit=100`),
+      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1D&limit=100`),
+      fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1W&limit=50`)
+    ]);
 
-    $('resultCard').style.display = 'block';
+    const k5m = parseK(res5m.data);
+    const k1h = parseK(res1h.data);
+    const k1d = parseK(res1d.data);
+    const k1w = parseK(res1w.data);
 
-    // 备选列表
-    if (results.length > 1) {
-        let otherHtml = '';
-        for (let i = 1; i < results.length; i++) {
-            const r = results[i];
-            const dirText = r.direction === 'LONG' ? '多' : '空';
-            const color = r.direction === 'LONG' ? '#3fb950' : '#f85149';
-            otherHtml += `
-            <div class="other-item">
-                <span style="font-weight:700;color:#fff;">${r.base} <span style="color:${color};font-size:12px;">[${dirText}]</span></span>
-                <span style="color:#8b949e;">评分: ${r.score} | 入场: ${px(r.entry)}</span>
-            </div>`;
-        }
-        $('othersList').innerHTML = otherHtml;
-        $('othersBox').style.display = 'block';
+    // 3. 各周期状态判断
+    function getState(k) {
+      const ema20 = calcEMA(k.c, 20);
+      const ema50 = calcEMA(k.c, 50);
+      const cur = k.c[k.c.length-1];
+      const e20 = ema20[ema20.length-1];
+      const e50 = ema50[ema50.length-1];
+      
+      if (e20 > e50 && cur > e20) return { text: '强势多头', cls: 'L' };
+      if (e20 < e50 && cur < e20) return { text: '极弱空头', cls: 'S' };
+      return { text: '震荡整理', cls: 'N' };
     }
+
+    const s5m = getState(k5m);
+    const s1h = getState(k1h);
+    const s1d = getState(k1d);
+    const s1w = getState(k1w);
+
+    $('tf-5m').innerHTML = `<span class="${s5m.cls}">${s5m.text}</span>`;
+    $('tf-1h').innerHTML = `<span class="${s1h.cls}">${s1h.text}</span>`;
+    $('tf-1d').innerHTML = `<span class="${s1d.cls}">${s1d.text}</span>`;
+    $('tf-1w').innerHTML = `<span class="${s1w.cls}">${s1w.text}</span>`;
+
+    // 4. 指标计算 (日线)
+    const ema20_1d = calcEMA(k1d.c, 20)[k1d.c.length-1];
+    const rsi_1d = calcRSI(k1d.c, 14)[k1d.c.length-1];
+    const macd_1d = calcMACD(k1d.c);
+
+    $('ind-ema').innerText = `$${px(ema20_1d)} (当前价在${last > ema20_1d ? '上' : '下'})`;
+    $('ind-ema').className = 'ind-val ' + (last > ema20_1d ? 'L' : 'S');
+
+    $('ind-rsi').innerText = `${rsi_1d.toFixed(1)} (${rsi_1d > 70 ? '超买' : rsi_1d < 30 ? '超卖' : '中性'})`;
+    $('ind-rsi').className = 'ind-val ' + (rsi_1d > 70 ? 'S' : rsi_1d < 30 ? 'L' : '');
+
+    $('ind-macd').innerText = `${macd_1d.hist > 0 ? '金叉多头' : '死叉空头'} (${macd_1d.hist.toFixed(2)})`;
+    $('ind-macd').className = 'ind-val ' + (macd_1d.hist > 0 ? 'L' : 'S');
+
+    // 5. 生成交易指令
+    let actHtml = '';
+    let actTitle = '';
+
+    // 逻辑判定：日线如果是空头，短线找高空机会
+    if (last < ema20_1d && macd_1d.hist < 0) {
+      // 偏空
+      actTitle = `🔴 整体策略：反弹做空 (顺应日线趋势)`;
+      const sl = Math.max(...k1h.h.slice(-5)) * 1.005;
+      const risk = sl - last;
+      const tp = last - risk * 2;
+      
+      actHtml = `
+        <div class="trade-item"><span>当前状态</span><span class="S">日线空头明确，逢高做空</span></div>
+        <div class="trade-item"><span>进场建议</span><span>${px(last)} (市价或逢高)</span></div>
+        <div class="trade-item"><span>防守止损</span><span class="S">${px(sl)}</span></div>
+        <div class="trade-item"><span>目标止盈</span><span class="L">${px(tp)}</span></div>
+      `;
+    } 
+    // 如果短线超卖严重，给出博反弹提示
+    else if (rsi_1d < 35 && s5m.cls === 'L') {
+      actTitle = `🟢 整体策略：超跌反弹 (超短线试多)`;
+      const sl = Math.min(...k5m.l.slice(-5)) * 0.995;
+      const risk = last - sl;
+      const tp = last + risk * 2;
+      
+      actHtml = `
+        <div class="trade-item"><span>当前状态</span><span class="L">日线超卖+5m企稳，可博反弹</span></div>
+        <div class="trade-item"><span>进场建议</span><span>${px(last)}</span></div>
+        <div class="trade-item"><span>防守止损</span><span class="S">${px(sl)}</span></div>
+        <div class="trade-item"><span>目标止盈</span><span class="L">${px(tp)}</span></div>
+        <div style="font-size:12px;color:#8b949e;margin-top:10px;">⚠️ 逆势单，快进快出，不可恋战！</div>
+      `;
+    } 
+    // 其他情况
+    else {
+      actTitle = `🟡 整体策略：观望等待`;
+      actHtml = `<div style="font-size:14px;color:#8b949e;line-height:1.6;">当前多周期信号冲突，日线未明确，短线无强共振。此时进场容易被来回双杀，建议空仓等待。</div>`;
+    }
+
+    $('actTitle').innerHTML = actTitle;
+    $('actContent').innerHTML = actHtml;
+
+    $('resultArea').style.display = 'block';
+
+  } catch(e) {
+    alert("网络错误或代理失效，请刷新重试。");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔍 刷新数据';
+  }
 }
 </script>
 </body>
