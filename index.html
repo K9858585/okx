@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ZEC 实时全周期作战终端</title>
+<title>ZEC 实时全自动研判终端</title>
 <style>
 *{box-sizing:border-box}
 body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:0;padding:14px;max-width:600px;margin:0 auto}
 h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex;justify-content:center;align-items:center;gap:8px}
 .btn{display:block;width:100%;padding:15px;margin-bottom:15px;border-radius:10px;border:none;font-size:16px;font-weight:700;cursor:pointer;transition:opacity 0.2s;background:#ff9f0a;color:#000;box-shadow:0 4px 15px rgba(255,159,10,0.3)}
 .btn:active{opacity:0.7}
-.btn:disabled{background:#30363d;color:#8b949e;box-shadow:none;cursor:not-allowed}
+.btn.stop{background:#f85149; color:#fff;}
 .sp{display:inline-block;width:16px;height:16px;border:2px solid #30363d;border-top-color:#ff9f0a;border-radius:50%;animation:r .8s linear infinite;vertical-align:-3px;margin-right:8px}
 @keyframes r{to{transform:rotate(360deg)}}
 
@@ -19,19 +19,18 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .price-big{font-size:36px;font-weight:900;color:#fff;font-family:monospace; text-shadow: 0 0 10px rgba(255,255,255,0.2);}
 .price-chg{font-size:14px;font-weight:bold;margin-top:4px;}
 
-/* 周期卡片 */
-.tf-card { background: #11161d; border: 1px solid #30363d; border-radius: 12px; padding: 15px; margin-bottom: 12px; position: relative; overflow: hidden; }
-.tf-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
-.tf-card.L::before { background: #3fb950; }
-.tf-card.S::before { background: #f85149; }
-.tf-card.N::before { background: #ff9f0a; }
+/* 实时信号卡片 */
+.signal-card { background: #11161d; border: 1px solid #30363d; border-radius: 12px; padding: 15px; margin-bottom: 12px; position: relative; overflow: hidden; transition: all 0.3s;}
+.signal-card.L { border-color: #3fb950; box-shadow: 0 0 15px rgba(63,185,80,0.15); }
+.signal-card.S { border-color: #f85149; box-shadow: 0 0 15px rgba(248,81,73,0.15); }
+.signal-card.N { border-color: #30363d; opacity: 0.6; }
 
 .tf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .tf-title { font-size: 16px; font-weight: bold; color: #fff; }
-.tf-status { font-size: 14px; font-weight: bold; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); }
-.tf-status.L { color: #3fb950; }
-.tf-status.S { color: #f85149; }
-.tf-status.N { color: #ff9f0a; }
+.tf-status { font-size: 13px; font-weight: bold; padding: 2px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); }
+.tf-status.L { color: #3fb950; background: rgba(63,185,80,0.1); }
+.tf-status.S { color: #f85149; background: rgba(248,81,73,0.1); }
+.tf-status.N { color: #8b949e; }
 
 .plan-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
 .plan-item { background: #0d1117; padding: 8px; border-radius: 8px; border: 1px solid #30363d; text-align: center; }
@@ -39,13 +38,14 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
 .plan-item .val { font-size: 14px; font-weight: bold; font-family: monospace; }
 
 .analysis-text { font-size: 13px; color: #8b949e; line-height: 1.5; margin-top: 10px; border-top: 1px dashed #30363d; padding-top: 8px; }
+.L{color:#3fb950}.S{color:#f85149}.N{color:#ff9f0a}
 </style>
 </head>
 <body>
 
-<h2>⚡ ZEC 全周期实战分析</h2>
+<h2>⚡ ZEC 实时全自动研判终端</h2>
 
-<button class="btn" id="btnRun" onclick="startScan()">🔍 刷新并跟随盘面</button>
+<button class="btn" id="btnRun" onclick="toggleAutoScan()">⏱️ 开启实时扫描 (10秒/次)</button>
 
 <div id="priceArea" style="display:none;">
   <div class="price-panel">
@@ -54,12 +54,31 @@ h2{font-size:18px;margin:0 0 15px;color:#ff9f0a;letter-spacing:.5px;display:flex
   </div>
 </div>
 
-<div id="cardsArea"></div>
+<div id="cardsArea">
+    <div style="text-align:center; color:#8b949e; padding:20px;">请点击上方按钮启动扫描...</div>
+</div>
 
 <script>
 const $=i=>document.getElementById(i);
 const px=p=>p>=1000?p.toFixed(2):p>=100?p.toFixed(2):p>=1?p.toFixed(4):p.toFixed(5);
 const baseCoin = 'ZEC-USDT-SWAP';
+let isRunning = false;
+let scanTimer = null;
+let audioCtx = null;
+
+// 状态缓存，用于判断是否发出新信号
+let lastSignals = { '15m': '', '1h': '', '4h': '', '1d': '' };
+
+function playAlert(){
+  if(!audioCtx) return;
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+  gain.gain.setValueAtTime(1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+  osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+}
 
 async function fetchOKX(path){
   const ctrl=new AbortController();
@@ -95,8 +114,42 @@ function calcEMA(closes,period){
   return new Array(period-1).fill(NaN).concat(ema);
 }
 
-// 核心判定逻辑
-function analyzeTF(kData, tfName) {
+function calcRSI(closes, period=14){
+  if(closes.length <= period) return [];
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = closes[i] - closes[i-1];
+    if (diff >= 0) gains += diff; else losses -= diff;
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  const rsi = [];
+  rsi[period] = 100 - (100 / (1 + avgGain / (avgLoss || 1)));
+  for (let i = period + 1; i < closes.length; i++) {
+    const diff = closes[i] - closes[i-1];
+    let gain = diff >= 0 ? diff : 0;
+    let loss = diff < 0 ? -diff : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    rsi[i] = 100 - (100 / (1 + avgGain / (avgLoss || 1)));
+  }
+  return new Array(period).fill(NaN).concat(rsi.slice(period));
+}
+
+function calcATR(h, l, c, period=14){
+  let trs = [];
+  for(let i=1; i<c.length; i++){
+    const tr = Math.max(h[i]-l[i], Math.abs(h[i]-c[i-1]), Math.abs(l[i]-c[i-1]));
+    trs.push(tr);
+  }
+  let atr = trs.slice(0, period).reduce((a,b)=>a+b,0)/period;
+  for(let i=period; i<trs.length; i++){
+    atr = (atr*(period-1) + trs[i]) / period;
+  }
+  return atr;
+}
+
+function analyzeTF(kData, tfName, keyName) {
     const { c, o, h, l } = kData;
     const n = c.length;
     if (n < 30) return null;
@@ -104,73 +157,64 @@ function analyzeTF(kData, tfName) {
     const curC = c[n-1];
     const curO = o[n-1];
     const ema5 = calcEMA(c, 5)[n-1];
-    const ema10 = calcEMA(c, 10)[n-1];
     const ema20 = calcEMA(c, 20)[n-1];
+    const rsi = calcRSI(c, 14)[n-1];
+    const atr = calcATR(h, l, c, 14);
 
-    // 判断多空
     let isBull = ema5 > ema20 && curC > ema20;
     let isBear = ema5 < ema20 && curC < ema20;
     
-    // 极端单边判定
     let statusClass = 'N';
-    let statusText = '震荡';
-    let dir = '';
+    let statusText = '观望 (信号冲突)';
+    let dir = '暂不进场';
+    let sl = 0, tp = 0, rr = 0, reason = '';
 
-    if (isBull) {
+    // 只有满足均线共振且不极端超买超卖才给信号
+    if (isBull && rsi < 75) {
         statusClass = 'L';
         statusText = '多头趋势';
         dir = '做多 (LONG)';
-    } else if (isBear) {
+        
+        // 止损用 1.5 倍 ATR
+        sl = curC - (atr * 1.5);
+        const risk = curC - sl;
+        tp = curC + risk * 2; // 盈亏比 1:2
+        
+        reason = `价格(${px(curC)}) 站上 EMA20(${px(ema20)})，EMA5>EMA20。RSI(${rsi.toFixed(1)}) 健康，动能向上。`;
+    } else if (isBear && rsi > 25) {
         statusClass = 'S';
         statusText = '空头趋势';
         dir = '做空 (SHORT)';
-    } else {
-        // 均线缠绕，看短期动能
-        if (curC > ema20) {
-            statusClass = 'L'; statusText = '偏多震荡'; dir = '做多 (LONG)';
-        } else {
-            statusClass = 'S'; statusText = '偏空震荡'; dir = '做空 (SHORT)';
-        }
-    }
-
-    // 动态计算止盈止损 (利用该周期前几根K线的极值)
-    let sl = 0, tp = 0, rr = 0;
-    const recent5L = Math.min(...l.slice(-5));
-    const recent5H = Math.max(...h.slice(-5));
-
-    if (statusClass === 'L') {
-        sl = recent5L * 0.998; // 放在近期低点下方
-        const risk = curC - sl;
-        tp = curC + risk * 2; // 盈亏比 1:2
-    } else {
-        sl = recent5H * 1.002; // 放在近期高点上方
+        
+        sl = curC + (atr * 1.5);
         const risk = sl - curC;
         tp = curC - risk * 2;
+        
+        reason = `价格(${px(curC)}) 被压制在 EMA20(${px(ema20)}) 之下。RSI(${rsi.toFixed(1)}) 未严重超卖。`;
+    } else {
+        reason = `均线缠绕或指标极端，当前盈亏比不佳，建议等待。`;
     }
     
-    const riskVal = Math.abs(curC - sl);
-    const rewardVal = Math.abs(tp - curC);
-    rr = (rewardVal / riskVal).toFixed(1);
-
-    // 形态解释
-    let reason = '';
-    if (statusClass === 'L') {
-        reason = `价格(${px(curC)}) 站上 EMA20(${px(ema20)})，且 EMA5 > EMA20。短线动能向上，回踩不破可进多。`;
-    } else {
-        reason = `价格(${px(curC)}) 被压制在 EMA20(${px(ema20)}) 之下，且 EMA5 < EMA20。反弹触及均线即可尝试进空。`;
+    if (statusClass !== 'N') {
+        rr = (Math.abs(tp - curC) / Math.abs(curC - sl)).toFixed(1);
     }
 
-    return { tfName, statusClass, statusText, dir, curC, sl, tp, rr, reason };
+    // 判定是否触发新信号（用于响铃）
+    let isNewSignal = false;
+    if (statusClass !== 'N' && lastSignals[keyName] !== statusClass) {
+        isNewSignal = true;
+        lastSignals[keyName] = statusClass;
+    } else if (statusClass === 'N') {
+        lastSignals[keyName] = 'N'; // 重置
+    }
+
+    return { tfName, statusClass, statusText, dir, curC, sl, tp, rr, reason, isNewSignal };
 }
 
-async function startScan() {
-  const btn = $('btnRun');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="sp"></span>拉取并计算中...';
-
+async function runScan() {
   try {
     const tickRes = await fetchOKX(`/api/v5/market/ticker?instId=${baseCoin}`);
-    if(tickRes.err) throw new Error("价格获取失败");
+    if(tickRes.err) return;
     const tick = tickRes.data[0];
     const last = parseFloat(tick.last);
     const open24 = parseFloat(tick.open24h);
@@ -180,7 +224,6 @@ async function startScan() {
     $('zecChg').innerHTML = `24h 涨跌: <span class="${chg>=0?'L':'S'}">${chg>=0?'+':''}${chg.toFixed(2)}%</span>`;
     $('priceArea').style.display = 'block';
 
-    // 并发请求 4 个周期
     const [r15m, r1h, r4h, r1d] = await Promise.all([
       fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=15m&limit=50`),
       fetchOKX(`/api/v5/market/candles?instId=${baseCoin}&bar=1H&limit=50`),
@@ -189,30 +232,37 @@ async function startScan() {
     ]);
 
     const tfs = [
-      { name: '15分钟 (超短线)', data: parseK(r15m.data) },
-      { name: '1小时 (日内短线)', data: parseK(r1h.data) },
-      { name: '4小时 (波段趋势)', data: parseK(r4h.data) },
-      { name: '日线 (宏观大方向)', data: parseK(r1d.data) }
+      { name: '15分钟 (超短线)', data: parseK(r15m.data), key: '15m' },
+      { name: '1小时 (日内短线)', data: parseK(r1h.data), key: '1h' },
+      { name: '4小时 (波段趋势)', data: parseK(r4h.data), key: '4h' },
+      { name: '日线 (宏观大方向)', data: parseK(r1d.data), key: '1d' }
     ];
 
     let html = '';
+    let needAlert = false;
+
     tfs.forEach(tf => {
-        const res = analyzeTF(tf.data, tf.name);
+        const res = analyzeTF(tf.data, tf.name, tf.key);
         if (!res) return;
 
-        let cColor = res.statusClass === 'L' ? '#3fb950' : res.statusClass === 'S' ? '#f85149' : '#ff9f0a';
+        if (res.isNewSignal) needAlert = true;
+
+        let cColor = res.statusClass === 'L' ? '#3fb950' : res.statusClass === 'S' ? '#f85149' : '#8b949e';
         
         html += `
-        <div class="tf-card ${res.statusClass}">
+        <div class="signal-card ${res.statusClass}">
             <div class="tf-header">
                 <span class="tf-title">${res.tfName}</span>
                 <span class="tf-status ${res.statusClass}">${res.statusText}</span>
             </div>
             
             <div style="font-size:16px; font-weight:bold; color:${cColor}; margin-bottom:10px;">
-                建议操作：${res.dir}
+                ${res.dir}
             </div>
+        `;
 
+        if (res.statusClass !== 'N') {
+            html += `
             <div class="plan-grid">
                 <div class="plan-item">
                     <div class="lbl">现价进场</div>
@@ -227,22 +277,53 @@ async function startScan() {
                     <div class="val L">${px(res.tp)}</div>
                 </div>
             </div>
-            
             <div class="analysis-text">
-                <b>形态解析：</b> ${res.reason} <br>
-                <b>盈亏比：</b> 1:${res.rr} (若盈亏比大于1.5可执行)
+                <b>解析：</b> ${res.reason} <br>
+                <b>盈亏比：</b> 1:${res.rr} (利用 ATR 测算)
             </div>
-        </div>
-        `;
+            `;
+        } else {
+            html += `
+            <div class="analysis-text" style="border:none; padding-top:0;">
+                <b>解析：</b> ${res.reason}
+            </div>
+            `;
+        }
+        
+        html += `</div>`;
     });
 
     $('cardsArea').innerHTML = html;
 
+    // 如果有新信号产生，触发响铃
+    if (needAlert) {
+        playAlert();
+        document.title = "🚨 ZEC 出现新信号！";
+        setTimeout(() => { document.title = "ZEC 实时全自动研判终端"; }, 5000);
+    }
+
   } catch(e) {
-    alert("网络错误，请刷新重试。");
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '🔍 刷新并跟随盘面';
+    console.error(e);
+  }
+}
+
+function toggleAutoScan() {
+  const btn = $('btnRun');
+  if (isRunning) {
+    isRunning = false;
+    clearInterval(scanTimer);
+    btn.innerText = '⏱️ 开启实时扫描 (10秒/次)';
+    btn.classList.remove('stop');
+  } else {
+    isRunning = true;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    btn.innerText = '🛑 停止实时扫描';
+    btn.classList.add('stop');
+    
+    runScan(); // 立即执行一次
+    scanTimer = setInterval(runScan, 10000); // 每 10 秒刷新
   }
 }
 </script>
